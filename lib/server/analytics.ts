@@ -59,17 +59,19 @@ export interface ComputedAnalyticsPayload {
 }
 
 /**
- * Loads all workspace records from PostgreSQL and evaluates the analytics engine.
+ * Loads all workspace records and evaluates the analytics engine,
+ * strictly scoped to the active workspace.
  */
 export async function getAnalyticsData(
   options?: AnalyticsFilterOptions,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<ComputedAnalyticsPayload> {
   const [videos, ideas, characters, calendarEvents] = await Promise.all([
-    getVideos(userId),
-    getIdeas(userId),
-    getCharacters(userId),
-    getCalendarEvents(userId),
+    getVideos(userId, workspaceId),
+    getIdeas(userId, workspaceId),
+    getCharacters(userId, workspaceId),
+    getCalendarEvents(userId, workspaceId),
   ]);
 
   const filteredVideos = filterAnalyticsDataset(videos, options);

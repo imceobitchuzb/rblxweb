@@ -15,6 +15,7 @@ import {
   Radio,
   ExternalLink,
   Flame,
+  Building2,
 } from "lucide-react";
 import { DEFAULT_CREATOR, ALL_VIDEO_PLATFORMS, PLATFORM_CONFIG } from "@/lib/constants";
 import { VideoPlatform } from "@/lib/types";
@@ -27,6 +28,7 @@ import {
   fetchUserSettingsAction,
   updateUserSettingsAction,
 } from "@/app/actions/settings";
+import { getAuthSessionAction, AuthSessionResponse } from "@/app/actions/auth";
 
 type SettingsTab = "profile" | "appearance" | "preferences" | "notifications" | "platforms";
 
@@ -52,14 +54,21 @@ export default function SettingsPage() {
 
   // Saved Feedback
   const [isSaved, setIsSaved] = React.useState(false);
+  const [authSession, setAuthSession] = React.useState<AuthSessionResponse | null>(null);
 
   React.useEffect(() => {
     let mounted = true;
     async function load() {
-      const res = await fetchUserSettingsAction();
+      const [res, sessionRes] = await Promise.all([
+        fetchUserSettingsAction(),
+        getAuthSessionAction(),
+      ]);
       if (mounted && res.success) {
         setNotifyDeadlines(res.data.emailNotifications);
         setNotifyReadyScripts(res.data.browserNotifications);
+      }
+      if (mounted && sessionRes.success && sessionRes.data) {
+        setAuthSession(sessionRes.data);
       }
     }
     load();
@@ -200,6 +209,39 @@ export default function SettingsPage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+                </div>
+
+                {/* Active Workspace Info Panel */}
+                <div className="p-4 rounded-xl bg-surface-canvas/80 border border-white/[0.08] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-violet-400" />
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        Active Workspace
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30 font-semibold">
+                      ROLE: {authSession?.role || "OWNER"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Workspace Name</span>
+                      <span className="text-white font-medium">{authSession?.workspace.name || "Roxie Velocity Studio"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Workspace Slug</span>
+                      <span className="text-white font-mono">{authSession?.workspace.slug || "roxie-velocity"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Account Email</span>
+                      <span className="text-white font-mono">{authSession?.user.email || "roxie@bloxmedia.gg"}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[11px]">Workspace ID</span>
+                      <span className="text-slate-400 font-mono text-[10px] truncate block">{authSession?.workspace.id || "workspace-demo-roxie"}</span>
+                    </div>
                   </div>
                 </div>
 

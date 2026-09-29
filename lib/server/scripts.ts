@@ -1,6 +1,6 @@
 import { prisma } from "../prisma";
 import { DialogueEmotion, DialogueLine, Scene, Script, ScriptStatus } from "../types";
-import { getCurrentUserId } from "./user-context";
+import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
 import { memoryStore } from "./store";
 
 function mapPrismaScriptToItem(script: {
@@ -12,6 +12,8 @@ function mapPrismaScriptToItem(script: {
   hook: string;
   tags: string[];
   estimatedDuration: number;
+  workspaceId?: string | null;
+  userId?: string;
   createdAt: Date;
   updatedAt: Date;
   characters: { characterId: string }[];
@@ -43,6 +45,8 @@ function mapPrismaScriptToItem(script: {
     hook: script.hook,
     tags: script.tags,
     estimatedDuration: script.estimatedDuration,
+    workspaceId: script.workspaceId || undefined,
+    userId: script.userId,
     createdAt: script.createdAt.toISOString(),
     updatedAt: script.updatedAt.toISOString(),
     characters: script.characters.map((c) => c.characterId),
@@ -66,12 +70,18 @@ function mapPrismaScriptToItem(script: {
   };
 }
 
-export async function getScripts(userId?: string): Promise<Script[]> {
+export async function getScripts(userId?: string, workspaceId?: string): Promise<Script[]> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const scripts = await prisma.script.findMany({
-      where: { userId: activeUserId },
+      where: {
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
       include: {
         characters: true,
         scenes: {
@@ -87,19 +97,29 @@ export async function getScripts(userId?: string): Promise<Script[]> {
     });
     return scripts.map(mapPrismaScriptToItem);
   } catch {
-    return memoryStore.scripts;
+    return memoryStore.scripts.filter((s) =>
+      s.workspaceId ? s.workspaceId === activeWorkspaceId : s.userId === activeUserId
+    );
   }
 }
 
 export async function getScriptById(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<Script | null> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const script = await prisma.script.findFirst({
-      where: { id, userId: activeUserId },
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
       include: {
         characters: true,
         scenes: {
@@ -114,7 +134,13 @@ export async function getScriptById(
     });
     return script ? mapPrismaScriptToItem(script) : null;
   } catch {
-    return memoryStore.scripts.find((s) => s.id === id) || null;
+    return (
+      memoryStore.scripts.find(
+        (s) =>
+          s.id === id &&
+          (s.workspaceId ? s.workspaceId === activeWorkspaceId : s.userId === activeUserId)
+      ) || null
+    );
   }
 }
 
@@ -128,9 +154,11 @@ export async function createScriptRecord(
     tags?: string[];
     characters?: string[];
   },
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<Script> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     await prisma.user.upsert({
@@ -146,6 +174,7 @@ export async function createScriptRecord(
     const created = await prisma.script.create({
       data: {
         userId: activeUserId,
+        workspaceId: activeWorkspaceId,
         ideaId: data.ideaId || null,
         title: data.title,
         description: data.description || "",
@@ -182,6 +211,8 @@ export async function createScriptRecord(
       estimatedDuration: 0,
       characters: data.characters || [],
       scenes: [],
+      workspaceId: activeWorkspaceId,
+      userId: activeUserId,
       createdAt: now,
       updatedAt: now,
     };
@@ -193,9 +224,11 @@ export async function createScriptRecord(
 export async function updateScriptRecord(
   id: string,
   data: Partial<Omit<Script, "id" | "createdAt" | "scenes">>,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<Script> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const updated = await prisma.script.update({
@@ -219,11 +252,19 @@ export async function updateScriptRecord(
       },
     });
     const mapped = mapPrismaScriptToItem(updated);
-    const idx = memoryStore.scripts.findIndex((s) => s.id === id);
+    const idx = memoryStore.scripts.findIndex(
+      (s) =>
+        s.id === id &&
+        (s.workspaceId ? s.workspaceId === activeWorkspaceId : s.userId === activeUserId)
+    );
     if (idx !== -1) memoryStore.scripts[idx] = mapped;
     return mapped;
   } catch {
-    const idx = memoryStore.scripts.findIndex((s) => s.id === id);
+    const idx = memoryStore.scripts.findIndex(
+      (s) =>
+        s.id === id &&
+        (s.workspaceId ? s.workspaceId === activeWorkspaceId : s.userId === activeUserId)
+    );
     if (idx === -1) throw new Error(`Script not found: ${id}`);
     const updated: Script = {
       ...memoryStore.scripts[idx],
@@ -237,19 +278,27 @@ export async function updateScriptRecord(
 
 export async function deleteScriptRecord(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<boolean> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     await prisma.script.delete({
       where: { id, userId: activeUserId },
     });
-    memoryStore.scripts = memoryStore.scripts.filter((s) => s.id !== id);
+    memoryStore.scripts = memoryStore.scripts.filter(
+      (s) =>
+        !(s.id === id && (s.workspaceId ? s.workspaceId === activeWorkspaceId : s.userId === activeUserId))
+    );
     return true;
   } catch {
     const initialLen = memoryStore.scripts.length;
-    memoryStore.scripts = memoryStore.scripts.filter((s) => s.id !== id);
+    memoryStore.scripts = memoryStore.scripts.filter(
+      (s) =>
+        !(s.id === id && (s.workspaceId ? s.workspaceId === activeWorkspaceId : s.userId === activeUserId))
+    );
     return memoryStore.scripts.length < initialLen;
   }
 }
@@ -287,7 +336,6 @@ export async function createSceneRecord(
       characters: created.characters,
       dialogue: [],
     };
-    // Update local memory store script as well
     const script = memoryStore.scripts.find((s) => s.id === scriptId);
     if (script) script.scenes.push(scene);
     return scene;

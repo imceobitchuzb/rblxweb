@@ -1,6 +1,6 @@
 import { prisma } from "../prisma";
 import { Video, VideoPlatform, VideoStatus } from "../types";
-import { getCurrentUserId } from "./user-context";
+import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
 import { memoryStore } from "./store";
 
 function mapPrismaVideoToItem(video: {
@@ -18,6 +18,8 @@ function mapPrismaVideoToItem(video: {
   comments: number;
   url: string | null;
   tags: string[];
+  workspaceId?: string | null;
+  userId?: string;
   scheduledAt: Date | null;
   publishedAt: Date | null;
   createdAt: Date;
@@ -39,6 +41,8 @@ function mapPrismaVideoToItem(video: {
     comments: video.comments,
     url: video.url || undefined,
     tags: video.tags,
+    workspaceId: video.workspaceId || undefined,
+    userId: video.userId,
     scheduledAt: video.scheduledAt ? video.scheduledAt.toISOString() : undefined,
     publishedAt: video.publishedAt ? video.publishedAt.toISOString() : undefined,
     createdAt: video.createdAt.toISOString(),
@@ -47,35 +51,57 @@ function mapPrismaVideoToItem(video: {
   };
 }
 
-export async function getVideos(userId?: string): Promise<Video[]> {
+export async function getVideos(userId?: string, workspaceId?: string): Promise<Video[]> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const videos = await prisma.video.findMany({
-      where: { userId: activeUserId },
+      where: {
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
       include: { characters: true },
       orderBy: { createdAt: "desc" },
     });
     return videos.map(mapPrismaVideoToItem);
   } catch {
-    return memoryStore.videos;
+    return memoryStore.videos.filter((v) =>
+      v.workspaceId ? v.workspaceId === activeWorkspaceId : v.userId === activeUserId
+    );
   }
 }
 
 export async function getVideoById(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<Video | null> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const video = await prisma.video.findFirst({
-      where: { id, userId: activeUserId },
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
       include: { characters: true },
     });
     return video ? mapPrismaVideoToItem(video) : null;
   } catch {
-    return memoryStore.videos.find((v) => v.id === id) || null;
+    return (
+      memoryStore.videos.find(
+        (v) =>
+          v.id === id &&
+          (v.workspaceId ? v.workspaceId === activeWorkspaceId : v.userId === activeUserId)
+      ) || null
+    );
   }
 }
 
@@ -95,9 +121,11 @@ export async function createVideoRecord(
     publishedAt?: string;
     url?: string;
   },
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<Video> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     await prisma.user.upsert({
@@ -113,6 +141,7 @@ export async function createVideoRecord(
     const created = await prisma.video.create({
       data: {
         userId: activeUserId,
+        workspaceId: activeWorkspaceId,
         title: data.title,
         description: data.description || "",
         platform: (data.platform || "YOUTUBE") as never,
@@ -156,6 +185,8 @@ export async function createVideoRecord(
       scheduledAt: data.scheduledAt,
       publishedAt: data.publishedAt,
       url: data.url,
+      workspaceId: activeWorkspaceId,
+      userId: activeUserId,
       createdAt: now,
       updatedAt: now,
     };
@@ -167,9 +198,11 @@ export async function createVideoRecord(
 export async function updateVideoRecord(
   id: string,
   data: Partial<Omit<Video, "id" | "createdAt">>,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<Video> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const updated = await prisma.video.update({
@@ -186,8 +219,6 @@ export async function updateVideoRecord(
         ...(data.comments !== undefined ? { comments: data.comments } : {}),
         ...(data.tags !== undefined ? { tags: data.tags } : {}),
         ...(data.url !== undefined ? { url: data.url } : {}),
-        ...(data.scriptId !== undefined ? { scriptId: data.scriptId || null } : {}),
-        ...(data.ideaId !== undefined ? { ideaId: data.ideaId || null } : {}),
         ...(data.scheduledAt !== undefined
           ? { scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null }
           : {}),
@@ -198,11 +229,19 @@ export async function updateVideoRecord(
       include: { characters: true },
     });
     const mapped = mapPrismaVideoToItem(updated);
-    const idx = memoryStore.videos.findIndex((v) => v.id === id);
+    const idx = memoryStore.videos.findIndex(
+      (v) =>
+        v.id === id &&
+        (v.workspaceId ? v.workspaceId === activeWorkspaceId : v.userId === activeUserId)
+    );
     if (idx !== -1) memoryStore.videos[idx] = mapped;
     return mapped;
   } catch {
-    const idx = memoryStore.videos.findIndex((v) => v.id === id);
+    const idx = memoryStore.videos.findIndex(
+      (v) =>
+        v.id === id &&
+        (v.workspaceId ? v.workspaceId === activeWorkspaceId : v.userId === activeUserId)
+    );
     if (idx === -1) throw new Error(`Video not found: ${id}`);
     const updated: Video = {
       ...memoryStore.videos[idx],
@@ -216,19 +255,81 @@ export async function updateVideoRecord(
 
 export async function deleteVideoRecord(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<boolean> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     await prisma.video.delete({
       where: { id, userId: activeUserId },
     });
-    memoryStore.videos = memoryStore.videos.filter((v) => v.id !== id);
+    memoryStore.videos = memoryStore.videos.filter(
+      (v) =>
+        !(v.id === id && (v.workspaceId ? v.workspaceId === activeWorkspaceId : v.userId === activeUserId))
+    );
     return true;
   } catch {
     const initialLen = memoryStore.videos.length;
-    memoryStore.videos = memoryStore.videos.filter((v) => v.id !== id);
+    memoryStore.videos = memoryStore.videos.filter(
+      (v) =>
+        !(v.id === id && (v.workspaceId ? v.workspaceId === activeWorkspaceId : v.userId === activeUserId))
+    );
     return memoryStore.videos.length < initialLen;
   }
+}
+
+export async function createVideoFromScript(
+  scriptId: string,
+  data?: {
+    platform?: VideoPlatform;
+    scheduledAt?: string;
+  },
+  userId?: string,
+  workspaceId?: string
+): Promise<Video> {
+  const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
+
+  const script = await prisma.script
+    .findFirst({
+      where: {
+        id: scriptId,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
+      include: { characters: true, scenes: true },
+    })
+    .catch(() => null);
+
+  const fallbackScript =
+    script ? null : memoryStore.scripts.find((s) => s.id === scriptId);
+
+  const targetTitle = script ? script.title : fallbackScript?.title || "New Video Project";
+  const targetDesc = script ? script.description : fallbackScript?.description || "";
+  const targetChars = script
+    ? script.characters.map((c) => c.characterId)
+    : fallbackScript?.characters || [];
+  const targetTags = script ? script.tags : fallbackScript?.tags || [];
+  const targetDuration = script ? script.estimatedDuration : fallbackScript?.estimatedDuration || 0;
+
+  return createVideoRecord(
+    {
+      title: targetTitle,
+      description: targetDesc,
+      scriptId,
+      ideaId: script?.ideaId || fallbackScript?.ideaId,
+      characterIds: targetChars,
+      tags: targetTags,
+      duration: targetDuration,
+      platform: data?.platform || "YOUTUBE",
+      scheduledAt: data?.scheduledAt,
+      status: "PLANNING",
+    },
+    activeUserId,
+    activeWorkspaceId
+  );
 }

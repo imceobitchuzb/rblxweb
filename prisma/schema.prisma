@@ -10,6 +10,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
 enum IdeaStatus {
   IDEA
   PLANNING
@@ -98,15 +104,18 @@ enum CalendarEventStatus {
 }
 
 model User {
-  id             String          @id @default(cuid())
-  email          String          @unique
+  id             String            @id @default(cuid())
+  email          String            @unique
+  passwordHash   String?
   name           String?
-  creatorTag     String?         @unique
+  creatorTag     String?           @unique
   avatarUrl      String?
   bio            String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
+  memberships    WorkspaceMember[]
+  ownedWorkspaces Workspace[]      @relation("WorkspaceOwner")
   ideas          Idea[]
   videos         Video[]
   scripts        Script[]
@@ -115,9 +124,46 @@ model User {
   settings       UserSettings?
 }
 
+model Workspace {
+  id             String            @id @default(cuid())
+  name           String
+  slug           String            @unique
+  ownerId        String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  owner          User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members        WorkspaceMember[]
+  ideas          Idea[]
+  characters     Character[]
+  scripts        Script[]
+  videos         Video[]
+  calendarEvents CalendarEvent[]
+
+  @@index([ownerId])
+  @@index([slug])
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
 model Idea {
   id             String        @id @default(cuid())
   userId         String
+  workspaceId    String?
   title          String
   description    String        @default("")
   category       IdeaCategory  @default(OTHER)
@@ -129,10 +175,12 @@ model Idea {
   updatedAt      DateTime      @updatedAt
 
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace      Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   scripts        Script[]
   videos         Video[]
 
   @@index([userId])
+  @@index([workspaceId])
   @@index([status])
   @@index([category])
   @@index([priority])
@@ -142,6 +190,7 @@ model Idea {
 model Character {
   id               String            @id @default(cuid())
   userId           String
+  workspaceId      String?
   name             String
   role             CharacterRole     @default(MAIN)
   description      String            @default("")
@@ -155,11 +204,13 @@ model Character {
   updatedAt        DateTime          @updatedAt
 
   user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace        Workspace?        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   dialogueLines    DialogueLine[]
   scriptCharacters ScriptCharacter[]
   videoCharacters  VideoCharacter[]
 
   @@index([userId])
+  @@index([workspaceId])
   @@index([role])
   @@index([name])
 }
@@ -167,6 +218,7 @@ model Character {
 model Script {
   id                String            @id @default(cuid())
   userId            String
+  workspaceId       String?
   ideaId            String?
   title             String
   description       String            @default("")
@@ -178,12 +230,14 @@ model Script {
   updatedAt         DateTime          @updatedAt
 
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace         Workspace?        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   idea              Idea?             @relation(fields: [ideaId], references: [id], onDelete: SetNull)
   scenes            Scene[]
   characters        ScriptCharacter[]
   videos            Video[]
 
   @@index([userId])
+  @@index([workspaceId])
   @@index([ideaId])
   @@index([status])
   @@index([createdAt])
@@ -241,6 +295,7 @@ model DialogueLine {
 model Video {
   id              String           @id @default(cuid())
   userId          String
+  workspaceId     String?
   ideaId          String?
   scriptId        String?
   title           String
@@ -260,12 +315,14 @@ model Video {
   updatedAt       DateTime         @updatedAt
 
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace       Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   idea            Idea?            @relation(fields: [ideaId], references: [id], onDelete: SetNull)
   script          Script?          @relation(fields: [scriptId], references: [id], onDelete: SetNull)
   characters      VideoCharacter[]
   calendarEvents  CalendarEvent[]
 
   @@index([userId])
+  @@index([workspaceId])
   @@index([status])
   @@index([platform])
   @@index([ideaId])
@@ -288,6 +345,7 @@ model VideoCharacter {
 model CalendarEvent {
   id            String              @id @default(cuid())
   userId        String
+  workspaceId   String?
   videoId       String?
   title         String
   type          CalendarEventType   @default(VIDEO)
@@ -299,9 +357,11 @@ model CalendarEvent {
   updatedAt     DateTime            @updatedAt
 
   user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace?          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   video         Video?              @relation(fields: [videoId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([workspaceId])
   @@index([scheduledAt])
   @@index([status])
   @@index([videoId])

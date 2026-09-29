@@ -338,3 +338,46 @@ export function validateCalendarEventInput(data: {
 
   return createValidationResult(issues);
 }
+
+// 5. Auth Validation
+export function validateRegisterInput(data: {
+  name?: unknown;
+  email?: unknown;
+  password?: unknown;
+  workspaceName?: unknown;
+}): ValidationResult {
+  const issues: ValidationIssue[] = [];
+
+  if (typeof data.name !== "string" || !data.name.trim() || data.name.trim().length < 2) {
+    issues.push({ field: "name", message: "Name must be at least 2 characters long." });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (typeof data.email !== "string" || !emailRegex.test(data.email.trim())) {
+    issues.push({ field: "email", message: "A valid email address is required." });
+  }
+
+  if (typeof data.password !== "string" || data.password.length < 8) {
+    issues.push({ field: "password", message: "Password must be at least 8 characters long." });
+  }
+
+  return createValidationResult(issues);
+}
+
+export function validateLoginInput(data: {
+  email?: unknown;
+  password?: unknown;
+}): ValidationResult {
+  const issues: ValidationIssue[] = [];
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (typeof data.email !== "string" || !emailRegex.test(data.email.trim())) {
+    issues.push({ field: "email", message: "A valid email address is required." });
+  }
+
+  if (typeof data.password !== "string" || !data.password) {
+    issues.push({ field: "password", message: "Password is required." });
+  }
+
+  return createValidationResult(issues);
+}

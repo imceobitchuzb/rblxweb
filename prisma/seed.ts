@@ -1,27 +1,38 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import { INITIAL_IDEAS } from "../lib/mock-ideas";
 import { INITIAL_CHARACTERS } from "../lib/mock-characters";
 import { INITIAL_SCRIPTS } from "../lib/mock-scripts";
 import { INITIAL_VIDEOS } from "../lib/mock-videos";
 import { INITIAL_CALENDAR_EVENTS } from "../lib/mock-calendar";
-import { DEMO_CREATOR_TAG, DEMO_USER_EMAIL, DEMO_USER_ID, DEMO_USER_NAME } from "../lib/server/user-context";
+import {
+  DEMO_CREATOR_TAG,
+  DEMO_USER_EMAIL,
+  DEMO_USER_ID,
+  DEMO_USER_NAME,
+  DEMO_WORKSPACE_ID,
+} from "../lib/server/user-context";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Starting ROXIE HUB Database Seed...");
+  console.log("🌱 Starting ROXIE HUB Database Seed (Phase 7: Multi-User Workspace)...");
 
-  // 1. Seed Demo User / Workspace
+  const passwordHash = bcrypt.hashSync("RoxieHub2026!", 10);
+
+  // 1. Seed Demo User
   const user = await prisma.user.upsert({
     where: { id: DEMO_USER_ID },
     update: {
       email: DEMO_USER_EMAIL,
       name: DEMO_USER_NAME,
       creatorTag: DEMO_CREATOR_TAG,
+      passwordHash,
     },
     create: {
       id: DEMO_USER_ID,
       email: DEMO_USER_EMAIL,
+      passwordHash,
       name: DEMO_USER_NAME,
       creatorTag: DEMO_CREATOR_TAG,
       bio: "Lead Roblox content creator, animator & studio director. Producing weekly MM2 mysteries and obby machinimas.",
@@ -30,7 +41,44 @@ async function main() {
   });
   console.log(`✓ User verified: ${user.name} (${user.id})`);
 
-  // 2. Seed User Settings
+  // 2. Seed Demo Workspace
+  const workspace = await prisma.workspace.upsert({
+    where: { id: DEMO_WORKSPACE_ID },
+    update: {
+      name: "Roxie Velocity Studio",
+      slug: "roxie-velocity",
+      ownerId: user.id,
+    },
+    create: {
+      id: DEMO_WORKSPACE_ID,
+      name: "Roxie Velocity Studio",
+      slug: "roxie-velocity",
+      ownerId: user.id,
+    },
+  });
+  console.log(`✓ Workspace verified: ${workspace.name} (${workspace.id})`);
+
+  // 3. Seed Workspace Membership (OWNER)
+  await prisma.workspaceMember.upsert({
+    where: {
+      workspaceId_userId: {
+        workspaceId: workspace.id,
+        userId: user.id,
+      },
+    },
+    update: {
+      role: "OWNER",
+    },
+    create: {
+      id: "member-demo-roxie",
+      workspaceId: workspace.id,
+      userId: user.id,
+      role: "OWNER",
+    },
+  });
+  console.log("✓ WorkspaceMember (OWNER) verified");
+
+  // 4. Seed User Settings
   await prisma.userSettings.upsert({
     where: { userId: user.id },
     update: {},
@@ -46,7 +94,7 @@ async function main() {
   });
   console.log("✓ UserSettings configured");
 
-  // 3. Seed Characters (~10 characters)
+  // 5. Seed Characters (~10 characters)
   for (const char of INITIAL_CHARACTERS) {
     await prisma.character.upsert({
       where: { id: char.id },
@@ -60,10 +108,12 @@ async function main() {
         avatarUrl: char.avatar,
         notes: char.notes,
         tags: char.tags,
+        workspaceId: workspace.id,
       },
       create: {
         id: char.id,
         userId: user.id,
+        workspaceId: workspace.id,
         name: char.name,
         role: char.role as never,
         description: char.description,
@@ -80,7 +130,7 @@ async function main() {
   }
   console.log(`✓ Seeded ${INITIAL_CHARACTERS.length} Roblox Characters`);
 
-  // 4. Seed Ideas (~18 ideas)
+  // 6. Seed Ideas (~18 ideas)
   for (const idea of INITIAL_IDEAS) {
     await prisma.idea.upsert({
       where: { id: idea.id },
@@ -92,10 +142,12 @@ async function main() {
         priority: idea.priority as never,
         tags: idea.tags,
         potentialScore: idea.potentialScore,
+        workspaceId: workspace.id,
       },
       create: {
         id: idea.id,
         userId: user.id,
+        workspaceId: workspace.id,
         title: idea.title,
         description: idea.description,
         category: idea.category as never,
@@ -110,9 +162,8 @@ async function main() {
   }
   console.log(`✓ Seeded ${INITIAL_IDEAS.length} Ideas`);
 
-  // 5. Seed Scripts with Scenes and DialogueLines (~5 scripts)
+  // 7. Seed Scripts with Scenes and DialogueLines (~5 scripts)
   for (const script of INITIAL_SCRIPTS) {
-    // Check if linked idea exists
     const validIdeaId =
       script.ideaId && INITIAL_IDEAS.some((i) => i.id === script.ideaId)
         ? script.ideaId
@@ -132,10 +183,12 @@ async function main() {
         hook: script.hook,
         tags: script.tags,
         estimatedDuration: script.estimatedDuration,
+        workspaceId: workspace.id,
       },
       create: {
         id: script.id,
         userId: user.id,
+        workspaceId: workspace.id,
         ideaId: validIdeaId,
         title: script.title,
         description: script.description,
@@ -196,7 +249,7 @@ async function main() {
   }
   console.log(`✓ Seeded ${INITIAL_SCRIPTS.length} Screenplays with Scenes & Dialogue Lines`);
 
-  // 6. Seed Videos (~14 videos)
+  // 8. Seed Videos (~14 videos)
   for (const video of INITIAL_VIDEOS) {
     const validIdeaId =
       video.ideaId && INITIAL_IDEAS.some((i) => i.id === video.ideaId)
@@ -227,10 +280,12 @@ async function main() {
         url: video.url || null,
         scheduledAt: video.scheduledAt ? new Date(video.scheduledAt) : null,
         publishedAt: video.publishedAt ? new Date(video.publishedAt) : null,
+        workspaceId: workspace.id,
       },
       create: {
         id: video.id,
         userId: user.id,
+        workspaceId: workspace.id,
         ideaId: validIdeaId,
         scriptId: validScriptId,
         title: video.title,
@@ -264,7 +319,7 @@ async function main() {
   }
   console.log(`✓ Seeded ${INITIAL_VIDEOS.length} Video assets with cast associations`);
 
-  // 7. Seed Calendar Events (~10 events)
+  // 9. Seed Calendar Events (~10 events)
   for (const evt of INITIAL_CALENDAR_EVENTS) {
     const validVideoId =
       evt.videoId && INITIAL_VIDEOS.some((v) => v.id === evt.videoId)
@@ -281,10 +336,12 @@ async function main() {
         status: evt.status as never,
         scheduledAt: new Date(evt.scheduledAt),
         notes: evt.notes || null,
+        workspaceId: workspace.id,
       },
       create: {
         id: evt.id,
         userId: user.id,
+        workspaceId: workspace.id,
         videoId: validVideoId,
         title: evt.title,
         type: evt.type as never,

@@ -10,10 +10,18 @@ import {
 import { validateVideoInput } from "../../lib/server/validation";
 import { ActionResult, errorResult, successResult } from "../../lib/server/types";
 import { Video, VideoPlatform, VideoStatus } from "../../lib/types";
+import { getAuthContext } from "../../lib/auth/context";
+import {
+  assertPermission,
+  canCreateContent,
+  canDeleteContent,
+  canEditContent,
+} from "../../lib/auth/permissions";
 
 export async function fetchVideosAction(): Promise<ActionResult<Video[]>> {
   try {
-    const videos = await getVideos();
+    const ctx = await getAuthContext();
+    const videos = await getVideos(ctx.user.id, ctx.workspace.id);
     return successResult(videos);
   } catch {
     return errorResult("Failed to fetch videos from database.");
@@ -36,13 +44,16 @@ export async function createVideoAction(data: {
   url?: string;
 }): Promise<ActionResult<Video>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canCreateContent(ctx.role), "Unauthorized: Insufficient workspace permissions to create videos.");
+
     const validation = validateVideoInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
       return errorResult(firstError, validation.errors);
     }
 
-    const created = await createVideoRecord(data);
+    const created = await createVideoRecord(data, ctx.user.id, ctx.workspace.id);
     revalidatePath("/videos");
     revalidatePath("/calendar");
     revalidatePath("/analytics");
@@ -59,13 +70,16 @@ export async function updateVideoAction(
   data: Partial<Omit<Video, "id" | "createdAt">>
 ): Promise<ActionResult<Video>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to edit videos.");
+
     const validation = validateVideoInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
       return errorResult(firstError, validation.errors);
     }
 
-    const updated = await updateVideoRecord(id, data);
+    const updated = await updateVideoRecord(id, data, ctx.user.id, ctx.workspace.id);
     revalidatePath("/videos");
     revalidatePath("/calendar");
     revalidatePath("/analytics");
@@ -79,7 +93,10 @@ export async function updateVideoAction(
 
 export async function deleteVideoAction(id: string): Promise<ActionResult<{ id: string }>> {
   try {
-    const ok = await deleteVideoRecord(id);
+    const ctx = await getAuthContext();
+    assertPermission(canDeleteContent(ctx.role), "Unauthorized: Insufficient workspace permissions to delete videos.");
+
+    const ok = await deleteVideoRecord(id, ctx.user.id, ctx.workspace.id);
     if (!ok) {
       return errorResult("Video not found or could not be removed.");
     }

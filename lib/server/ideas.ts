@@ -1,6 +1,6 @@
 import { prisma } from "../prisma";
 import { IdeaItem, IdeaStatus } from "../types";
-import { getCurrentUserId } from "./user-context";
+import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
 import { memoryStore } from "./store";
 
 function mapPrismaIdeaToItem(idea: {
@@ -12,6 +12,8 @@ function mapPrismaIdeaToItem(idea: {
   priority: string;
   tags: string[];
   potentialScore: number;
+  workspaceId?: string | null;
+  userId?: string;
   createdAt: Date;
   updatedAt: Date;
 }): IdeaItem {
@@ -24,39 +26,63 @@ function mapPrismaIdeaToItem(idea: {
     priority: idea.priority as IdeaItem["priority"],
     tags: idea.tags,
     potentialScore: idea.potentialScore,
+    workspaceId: idea.workspaceId || undefined,
+    userId: idea.userId,
     createdAt: idea.createdAt.toISOString(),
     updatedAt: idea.updatedAt.toISOString(),
   };
 }
 
-export async function getIdeas(userId?: string): Promise<IdeaItem[]> {
+export async function getIdeas(userId?: string, workspaceId?: string): Promise<IdeaItem[]> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const ideas = await prisma.idea.findMany({
-      where: { userId: activeUserId },
+      where: {
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
       orderBy: { createdAt: "desc" },
     });
     return ideas.map(mapPrismaIdeaToItem);
   } catch {
-    // Fallback to memory store if PostgreSQL connection is unavailable
-    return memoryStore.ideas;
+    // Fallback to memory store scoped to active workspace
+    return memoryStore.ideas.filter((i) =>
+      i.workspaceId ? i.workspaceId === activeWorkspaceId : i.userId === activeUserId
+    );
   }
 }
 
 export async function getIdeaById(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<IdeaItem | null> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const idea = await prisma.idea.findFirst({
-      where: { id, userId: activeUserId },
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
     });
     return idea ? mapPrismaIdeaToItem(idea) : null;
   } catch {
-    return memoryStore.ideas.find((i) => i.id === id) || null;
+    return (
+      memoryStore.ideas.find(
+        (i) =>
+          i.id === id &&
+          (i.workspaceId ? i.workspaceId === activeWorkspaceId : i.userId === activeUserId)
+      ) || null
+    );
   }
 }
 
@@ -70,9 +96,11 @@ export async function createIdeaRecord(
     tags?: string[];
     potentialScore?: number;
   },
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<IdeaItem> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     // Ensure User exists before inserting idea
@@ -89,6 +117,7 @@ export async function createIdeaRecord(
     const created = await prisma.idea.create({
       data: {
         userId: activeUserId,
+        workspaceId: activeWorkspaceId,
         title: data.title,
         description: data.description || "",
         category: (data.category || "OTHER") as never,
@@ -112,6 +141,8 @@ export async function createIdeaRecord(
       priority: data.priority || "MEDIUM",
       tags: data.tags || [],
       potentialScore: data.potentialScore ?? 5,
+      workspaceId: activeWorkspaceId,
+      userId: activeUserId,
       createdAt: now,
       updatedAt: now,
     };
@@ -123,9 +154,11 @@ export async function createIdeaRecord(
 export async function updateIdeaRecord(
   id: string,
   data: Partial<Omit<IdeaItem, "id" | "createdAt">>,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<IdeaItem> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const updated = await prisma.idea.update({
@@ -141,11 +174,19 @@ export async function updateIdeaRecord(
       },
     });
     const mapped = mapPrismaIdeaToItem(updated);
-    const idx = memoryStore.ideas.findIndex((i) => i.id === id);
+    const idx = memoryStore.ideas.findIndex(
+      (i) =>
+        i.id === id &&
+        (i.workspaceId ? i.workspaceId === activeWorkspaceId : i.userId === activeUserId)
+    );
     if (idx !== -1) memoryStore.ideas[idx] = mapped;
     return mapped;
   } catch {
-    const idx = memoryStore.ideas.findIndex((i) => i.id === id);
+    const idx = memoryStore.ideas.findIndex(
+      (i) =>
+        i.id === id &&
+        (i.workspaceId ? i.workspaceId === activeWorkspaceId : i.userId === activeUserId)
+    );
     if (idx === -1) {
       throw new Error(`Idea not found: ${id}`);
     }
@@ -161,19 +202,27 @@ export async function updateIdeaRecord(
 
 export async function deleteIdeaRecord(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<boolean> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     await prisma.idea.delete({
       where: { id, userId: activeUserId },
     });
-    memoryStore.ideas = memoryStore.ideas.filter((i) => i.id !== id);
+    memoryStore.ideas = memoryStore.ideas.filter(
+      (i) =>
+        !(i.id === id && (i.workspaceId ? i.workspaceId === activeWorkspaceId : i.userId === activeUserId))
+    );
     return true;
   } catch {
     const initialLen = memoryStore.ideas.length;
-    memoryStore.ideas = memoryStore.ideas.filter((i) => i.id !== id);
+    memoryStore.ideas = memoryStore.ideas.filter(
+      (i) =>
+        !(i.id === id && (i.workspaceId ? i.workspaceId === activeWorkspaceId : i.userId === activeUserId))
+    );
     return memoryStore.ideas.length < initialLen;
   }
 }
@@ -189,13 +238,14 @@ const STATUS_PROGRESSION: Record<IdeaStatus, IdeaStatus | null> = {
 
 export async function advanceIdeaStatusRecord(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<IdeaItem> {
-  const idea = await getIdeaById(id, userId);
+  const idea = await getIdeaById(id, userId, workspaceId);
   if (!idea) throw new Error(`Idea not found: ${id}`);
 
   const nextStatus = STATUS_PROGRESSION[idea.status];
   if (!nextStatus) return idea;
 
-  return updateIdeaRecord(id, { status: nextStatus }, userId);
+  return updateIdeaRecord(id, { status: nextStatus }, userId, workspaceId);
 }

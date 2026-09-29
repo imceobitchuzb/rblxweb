@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - Phase 7: Authentication & Multi-User Workspace Architecture
+
+### Added
+- **Multi-Tenant SaaS Workspace Architecture**:
+  - Prisma models: `Workspace`, `WorkspaceMember`, and `WorkspaceRole` enum (`OWNER`, `ADMIN`, `MEMBER`).
+  - Direct workspace scoping (`workspaceId`) on all core domain entities (`Idea`, `Character`, `Script`, `Video`, `CalendarEvent`).
+  - Strict multi-tenant data isolation: all queries, mutations, search filters, notifications, and creator analytics calculations are strictly isolated to the active workspace.
+- **Authentication Subsystem (`lib/auth/`)**:
+  - `lib/auth/password.ts`: Password hashing and verification using `bcryptjs` (10 salt rounds).
+  - `lib/auth/session.ts`: Signed JWT session tokens using `jose` (`HS256`, 7-day expiration) stored in secure HTTP-only cookies (`roxie_session`).
+  - `lib/auth/context.ts`: Server-side context resolution for `{ user, workspace, role }` with database and development memory store fallbacks.
+  - `lib/auth/permissions.ts`: Role-based access control (`assertPermission`, `hasMinimumRole`, `canManageWorkspace`, `canManageMembers`, `canCreateContent`, `canEditContent`, `canDeleteContent`).
+- **Edge Route Protection Middleware (`middleware.ts`)**:
+  - Edge-runtime compatible middleware verifying JWT session cookies for protected routes (`/dashboard`, `/ideas`, `/characters`, `/scripts`, `/videos`, `/calendar`, `/analytics`, `/settings`).
+  - Automated redirection to `/login?callbackUrl=...` for unauthenticated requests.
+  - Redirects authenticated users visiting `/login` or `/register` to `/dashboard`.
+- **Authentication Server Actions (`app/actions/auth.ts`)**:
+  - `registerAction`: Validates inputs, creates user and personal workspace, assigns `OWNER` membership, generates signed JWT, and sets cookie.
+  - `loginAction`: Verifies credentials with `verifyPassword`, resolves workspace & role, generates signed JWT, and sets cookie.
+  - `logoutAction`: Clears session cookie and invalidates state.
+  - `getAuthSessionAction`: Returns authenticated session details for client components.
+- **Authentication User Interfaces**:
+  - `app/login/page.tsx` & `components/auth/LoginForm.tsx`: Styled sign-in form with client validation and 1-click Demo credentials auto-fill button (`roxie@bloxmedia.gg` / `RoxieHub2026!`).
+  - `app/register/page.tsx` & `components/auth/RegisterForm.tsx`: Account and workspace registration form.
+  - `app/forbidden/page.tsx`: 403 Access Restricted screen for unauthorized workspace resource requests.
+  - `components/auth/AuthCard.tsx`: Reusable branding and form wrapper with ambient lighting effects.
+- **Navigation & Settings Enhancements**:
+  - `components/layout/TopNav.tsx`: Interactive User and Workspace dropdown displaying current creator avatar, name, email, workspace name, role badge, settings link, and Sign Out action.
+  - `app/settings/page.tsx`: Added Active Workspace & SaaS Membership panel with workspace slug, workspace ID, role badge, and account email.
+- **Seed & Data Access Updates**:
+  - `prisma/seed.ts`: Seeds demo user `Roxie Velocity` with bcrypt hashed password, "Roxie Velocity Studio" workspace, and OWNER membership.
+  - All server actions updated with server-side authorization: never trust client-provided `userId` or `workspaceId`.
+- **Automated Test Suite Expansion**:
+  - Added `tests/auth.test.ts` (7 tests) and `tests/authorization.test.ts` (3 tests).
+  - Total test count expanded from 77 to 87 passing tests (0 failures).
+
+---
+
 ## [1.0.0] - Phase 6: Full-Stack Persistence, Prisma ORM, PostgreSQL Schema & Server Actions
 
 ### Added

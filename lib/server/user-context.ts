@@ -1,13 +1,16 @@
 /**
  * User & Workspace Context Abstraction for Server Actions and Data Access
  *
- * In Phase 6, this provides a deterministic demo user identity ("user-creator-roxie")
- * ensuring all database records are correctly scoped by `userId`.
- * In Phase 7 (Authentication), this will extract the authenticated session
- * (e.g., NextAuth, JWT, or Supabase Auth) without altering the data access interface.
+ * Provides user identity and active workspace resolution.
+ * Seamlessly integrates with signed JWT session cookies and provides
+ * deterministic demo fallback for development & offline test runners.
  */
 
-export const DEMO_USER_ID = "user-creator-roxie";
+import { DEMO_USER_ID, DEMO_WORKSPACE_ID } from "./store";
+import { getAuthContext, getCurrentUserId as getAuthUserId, getCurrentWorkspaceId as getAuthWorkspaceId } from "../auth/context";
+import { Workspace } from "../types";
+
+export { DEMO_USER_ID, DEMO_WORKSPACE_ID };
 export const DEMO_USER_EMAIL = "roxie@bloxmedia.gg";
 export const DEMO_USER_NAME = "Roxie Velocity";
 export const DEMO_CREATOR_TAG = "ROXIE_PRO";
@@ -24,17 +27,33 @@ export interface CurrentUser {
  * All Prisma database queries and mutations scope by this ID.
  */
 export async function getCurrentUserId(): Promise<string> {
-  return DEMO_USER_ID;
+  return getAuthUserId();
 }
 
 /**
  * Returns the current active user object.
  */
 export async function getCurrentUser(): Promise<CurrentUser> {
+  const ctx = await getAuthContext();
   return {
-    id: DEMO_USER_ID,
-    email: DEMO_USER_EMAIL,
-    name: DEMO_USER_NAME,
-    creatorTag: DEMO_CREATOR_TAG,
+    id: ctx.user.id,
+    email: ctx.user.email,
+    name: ctx.user.name,
+    creatorTag: ctx.user.creatorTag || DEMO_CREATOR_TAG,
   };
+}
+
+/**
+ * Returns the active workspace ID.
+ */
+export async function getCurrentWorkspaceId(): Promise<string> {
+  return getAuthWorkspaceId();
+}
+
+/**
+ * Returns the active workspace record.
+ */
+export async function getCurrentWorkspace(): Promise<Workspace> {
+  const ctx = await getAuthContext();
+  return ctx.workspace;
 }

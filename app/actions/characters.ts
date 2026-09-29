@@ -10,10 +10,18 @@ import {
 import { validateCharacterInput } from "../../lib/server/validation";
 import { ActionResult, errorResult, successResult } from "../../lib/server/types";
 import { Character, CharacterRole } from "../../lib/types";
+import { getAuthContext } from "../../lib/auth/context";
+import {
+  assertPermission,
+  canCreateContent,
+  canDeleteContent,
+  canEditContent,
+} from "../../lib/auth/permissions";
 
 export async function fetchCharactersAction(): Promise<ActionResult<Character[]>> {
   try {
-    const characters = await getCharacters();
+    const ctx = await getAuthContext();
+    const characters = await getCharacters(ctx.user.id, ctx.workspace.id);
     return successResult(characters);
   } catch {
     return errorResult("Failed to fetch characters from database.");
@@ -31,13 +39,16 @@ export async function createCharacterAction(data: {
   tags?: string[];
 }): Promise<ActionResult<Character>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canCreateContent(ctx.role), "Unauthorized: Insufficient workspace permissions to create characters.");
+
     const validation = validateCharacterInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
       return errorResult(firstError, validation.errors);
     }
 
-    const created = await createCharacterRecord(data);
+    const created = await createCharacterRecord(data, ctx.user.id, ctx.workspace.id);
     revalidatePath("/characters");
     revalidatePath("/scripts");
     revalidatePath("/dashboard");
@@ -53,13 +64,16 @@ export async function updateCharacterAction(
   data: Partial<Omit<Character, "id" | "createdAt">>
 ): Promise<ActionResult<Character>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to edit characters.");
+
     const validation = validateCharacterInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
       return errorResult(firstError, validation.errors);
     }
 
-    const updated = await updateCharacterRecord(id, data);
+    const updated = await updateCharacterRecord(id, data, ctx.user.id, ctx.workspace.id);
     revalidatePath("/characters");
     revalidatePath("/scripts");
     return successResult(updated);
@@ -71,7 +85,10 @@ export async function updateCharacterAction(
 
 export async function deleteCharacterAction(id: string): Promise<ActionResult<{ id: string }>> {
   try {
-    const ok = await deleteCharacterRecord(id);
+    const ctx = await getAuthContext();
+    assertPermission(canDeleteContent(ctx.role), "Unauthorized: Insufficient workspace permissions to delete characters.");
+
+    const ok = await deleteCharacterRecord(id, ctx.user.id, ctx.workspace.id);
     if (!ok) {
       return errorResult("Character not found or could not be removed.");
     }

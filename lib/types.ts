@@ -48,6 +48,8 @@ export interface IdeaItem {
   priority: IdeaPriority;
   tags: string[];
   potentialScore: number; // 1 to 10
+  workspaceId?: string;
+  userId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +74,8 @@ export interface Video {
   publicationDate?: string; // backwards compatibility alias
   scheduledAt?: string;
   url?: string;
+  workspaceId?: string;
+  userId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -129,6 +133,8 @@ export interface Script {
   characters: string[]; // character IDs
   tags: string[];
   estimatedDuration: number; // in seconds
+  workspaceId?: string;
+  userId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -147,6 +153,8 @@ export interface Character {
   avatarUrl?: string; // alias
   outfit: string;
   notes: string;
+  workspaceId?: string;
+  userId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -177,6 +185,8 @@ export interface CalendarEvent {
   scheduledAt: string;
   scheduledDate?: string; // backwards compatibility alias
   notes?: string;
+  workspaceId?: string;
+  userId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -269,5 +279,53 @@ export interface PublishingActivityData {
   published: number;
   scheduled: number;
   inProduction: number;
+}
+
+// ==========================================
+// Authentication & Multi-Tenant Workspace Types
+// ==========================================
+
+export type WorkspaceRole = "OWNER" | "ADMIN" | "MEMBER";
+
+export interface Workspace {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkspaceMember {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: WorkspaceRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  creatorTag?: string;
+  avatarUrl?: string;
+  createdAt?: string;
+}
+
+export interface SessionPayload {
+  sub: string; // userId
+  email: string;
+  workspaceId: string;
+  role: WorkspaceRole;
+  name?: string;
+  creatorTag?: string;
+}
+
+export interface AuthContext {
+  user: AuthUser;
+  workspace: Workspace;
+  role: WorkspaceRole;
 }
 

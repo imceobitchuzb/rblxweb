@@ -21,10 +21,18 @@ import {
 } from "../../lib/server/validation";
 import { ActionResult, errorResult, successResult } from "../../lib/server/types";
 import { DialogueEmotion, DialogueLine, Scene, Script, ScriptStatus } from "../../lib/types";
+import { getAuthContext } from "../../lib/auth/context";
+import {
+  assertPermission,
+  canCreateContent,
+  canDeleteContent,
+  canEditContent,
+} from "../../lib/auth/permissions";
 
 export async function fetchScriptsAction(): Promise<ActionResult<Script[]>> {
   try {
-    const scripts = await getScripts();
+    const ctx = await getAuthContext();
+    const scripts = await getScripts(ctx.user.id, ctx.workspace.id);
     return successResult(scripts);
   } catch {
     return errorResult("Failed to fetch screenplays from database.");
@@ -41,13 +49,16 @@ export async function createScriptAction(data: {
   characters?: string[];
 }): Promise<ActionResult<Script>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canCreateContent(ctx.role), "Unauthorized: Insufficient workspace permissions to create scripts.");
+
     const validation = validateScriptInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
       return errorResult(firstError, validation.errors);
     }
 
-    const created = await createScriptRecord(data);
+    const created = await createScriptRecord(data, ctx.user.id, ctx.workspace.id);
     revalidatePath("/scripts");
     revalidatePath("/dashboard");
     return successResult(created);
@@ -62,13 +73,16 @@ export async function updateScriptAction(
   data: Partial<Omit<Script, "id" | "createdAt" | "scenes">>
 ): Promise<ActionResult<Script>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to edit scripts.");
+
     const validation = validateScriptInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
       return errorResult(firstError, validation.errors);
     }
 
-    const updated = await updateScriptRecord(id, data);
+    const updated = await updateScriptRecord(id, data, ctx.user.id, ctx.workspace.id);
     revalidatePath("/scripts");
     revalidatePath("/dashboard");
     return successResult(updated);
@@ -80,7 +94,10 @@ export async function updateScriptAction(
 
 export async function deleteScriptAction(id: string): Promise<ActionResult<{ id: string }>> {
   try {
-    const ok = await deleteScriptRecord(id);
+    const ctx = await getAuthContext();
+    assertPermission(canDeleteContent(ctx.role), "Unauthorized: Insufficient workspace permissions to delete scripts.");
+
+    const ok = await deleteScriptRecord(id, ctx.user.id, ctx.workspace.id);
     if (!ok) {
       return errorResult("Script not found or could not be removed.");
     }
@@ -105,6 +122,9 @@ export async function createSceneAction(
   }
 ): Promise<ActionResult<Scene>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to edit scenes.");
+
     const validation = validateSceneInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
@@ -125,6 +145,9 @@ export async function updateSceneAction(
   data: Partial<Omit<Scene, "id" | "dialogue">>
 ): Promise<ActionResult<Scene>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to edit scenes.");
+
     const validation = validateSceneInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
@@ -142,6 +165,9 @@ export async function updateSceneAction(
 
 export async function deleteSceneAction(sceneId: string): Promise<ActionResult<{ id: string }>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to delete scenes.");
+
     const ok = await deleteSceneRecord(sceneId);
     if (!ok) {
       return errorResult("Scene not found or could not be removed.");
@@ -159,6 +185,9 @@ export async function reorderScenesAction(
   sceneIdsInOrder: string[]
 ): Promise<ActionResult<{ success: boolean }>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to reorder scenes.");
+
     await reorderScenesRecord(scriptId, sceneIdsInOrder);
     revalidatePath("/scripts");
     return successResult({ success: true });
@@ -179,6 +208,9 @@ export async function createDialogueLineAction(
   }
 ): Promise<ActionResult<DialogueLine>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to edit dialogue.");
+
     const validation = validateDialogueInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
@@ -199,6 +231,9 @@ export async function updateDialogueLineAction(
   data: Partial<Omit<DialogueLine, "id">>
 ): Promise<ActionResult<DialogueLine>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to edit dialogue.");
+
     const validation = validateDialogueInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
@@ -216,6 +251,9 @@ export async function updateDialogueLineAction(
 
 export async function deleteDialogueLineAction(lineId: string): Promise<ActionResult<{ id: string }>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to delete dialogue.");
+
     const ok = await deleteDialogueLineRecord(lineId);
     if (!ok) {
       return errorResult("Dialogue line not found.");

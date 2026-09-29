@@ -15,10 +15,18 @@ import {
   CalendarEventType,
   VideoPlatform,
 } from "../../lib/types";
+import { getAuthContext } from "../../lib/auth/context";
+import {
+  assertPermission,
+  canCreateContent,
+  canDeleteContent,
+  canEditContent,
+} from "../../lib/auth/permissions";
 
 export async function fetchCalendarEventsAction(): Promise<ActionResult<CalendarEvent[]>> {
   try {
-    const events = await getCalendarEvents();
+    const ctx = await getAuthContext();
+    const events = await getCalendarEvents(ctx.user.id, ctx.workspace.id);
     return successResult(events);
   } catch {
     return errorResult("Failed to fetch calendar events from database.");
@@ -35,13 +43,16 @@ export async function createCalendarEventAction(data: {
   notes?: string;
 }): Promise<ActionResult<CalendarEvent>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canCreateContent(ctx.role), "Unauthorized: Insufficient workspace permissions to create calendar events.");
+
     const validation = validateCalendarEventInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
       return errorResult(firstError, validation.errors);
     }
 
-    const created = await createCalendarEventRecord(data);
+    const created = await createCalendarEventRecord(data, ctx.user.id, ctx.workspace.id);
     revalidatePath("/calendar");
     revalidatePath("/dashboard");
     return successResult(created);
@@ -56,13 +67,16 @@ export async function updateCalendarEventAction(
   data: Partial<Omit<CalendarEvent, "id" | "createdAt">>
 ): Promise<ActionResult<CalendarEvent>> {
   try {
+    const ctx = await getAuthContext();
+    assertPermission(canEditContent(ctx.role), "Unauthorized: Insufficient workspace permissions to edit calendar events.");
+
     const validation = validateCalendarEventInput(data);
     if (!validation.valid) {
       const firstError = Object.values(validation.errors)[0]?.[0] || "Validation failed";
       return errorResult(firstError, validation.errors);
     }
 
-    const updated = await updateCalendarEventRecord(id, data);
+    const updated = await updateCalendarEventRecord(id, data, ctx.user.id, ctx.workspace.id);
     revalidatePath("/calendar");
     revalidatePath("/dashboard");
     return successResult(updated);
@@ -74,7 +88,10 @@ export async function updateCalendarEventAction(
 
 export async function deleteCalendarEventAction(id: string): Promise<ActionResult<{ id: string }>> {
   try {
-    const ok = await deleteCalendarEventRecord(id);
+    const ctx = await getAuthContext();
+    assertPermission(canDeleteContent(ctx.role), "Unauthorized: Insufficient workspace permissions to delete calendar events.");
+
+    const ok = await deleteCalendarEventRecord(id, ctx.user.id, ctx.workspace.id);
     if (!ok) {
       return errorResult("Calendar event not found or could not be removed.");
     }

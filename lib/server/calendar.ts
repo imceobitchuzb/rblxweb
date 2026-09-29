@@ -5,7 +5,7 @@ import {
   CalendarEventType,
   VideoPlatform,
 } from "../types";
-import { getCurrentUserId } from "./user-context";
+import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
 import { memoryStore } from "./store";
 
 function mapPrismaEventToItem(evt: {
@@ -17,6 +17,8 @@ function mapPrismaEventToItem(evt: {
   status: string;
   scheduledAt: Date;
   notes: string | null;
+  workspaceId?: string | null;
+  userId?: string;
   createdAt: Date;
   updatedAt: Date;
 }): CalendarEvent {
@@ -29,22 +31,35 @@ function mapPrismaEventToItem(evt: {
     status: evt.status as CalendarEventStatus,
     scheduledAt: evt.scheduledAt.toISOString(),
     notes: evt.notes || undefined,
+    workspaceId: evt.workspaceId || undefined,
+    userId: evt.userId,
     createdAt: evt.createdAt.toISOString(),
     updatedAt: evt.updatedAt.toISOString(),
   };
 }
 
-export async function getCalendarEvents(userId?: string): Promise<CalendarEvent[]> {
+export async function getCalendarEvents(
+  userId?: string,
+  workspaceId?: string
+): Promise<CalendarEvent[]> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const events = await prisma.calendarEvent.findMany({
-      where: { userId: activeUserId },
+      where: {
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
       orderBy: { scheduledAt: "asc" },
     });
     return events.map(mapPrismaEventToItem);
   } catch {
-    return memoryStore.calendarEvents;
+    return memoryStore.calendarEvents.filter((e) =>
+      e.workspaceId ? e.workspaceId === activeWorkspaceId : e.userId === activeUserId
+    );
   }
 }
 
@@ -58,9 +73,11 @@ export async function createCalendarEventRecord(
     videoId?: string;
     notes?: string;
   },
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<CalendarEvent> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     await prisma.user.upsert({
@@ -76,6 +93,7 @@ export async function createCalendarEventRecord(
     const created = await prisma.calendarEvent.create({
       data: {
         userId: activeUserId,
+        workspaceId: activeWorkspaceId,
         title: data.title,
         scheduledAt: new Date(data.scheduledAt),
         type: (data.type || "VIDEO") as never,
@@ -99,6 +117,8 @@ export async function createCalendarEventRecord(
       status: data.status || "PLANNED",
       videoId: data.videoId,
       notes: data.notes,
+      workspaceId: activeWorkspaceId,
+      userId: activeUserId,
       createdAt: now,
       updatedAt: now,
     };
@@ -110,31 +130,39 @@ export async function createCalendarEventRecord(
 export async function updateCalendarEventRecord(
   id: string,
   data: Partial<Omit<CalendarEvent, "id" | "createdAt">>,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<CalendarEvent> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const updated = await prisma.calendarEvent.update({
       where: { id, userId: activeUserId },
       data: {
         ...(data.title !== undefined ? { title: data.title } : {}),
+        ...(data.scheduledAt !== undefined ? { scheduledAt: new Date(data.scheduledAt) } : {}),
         ...(data.type !== undefined ? { type: data.type as never } : {}),
         ...(data.platform !== undefined ? { platform: data.platform as never } : {}),
         ...(data.status !== undefined ? { status: data.status as never } : {}),
+        ...(data.videoId !== undefined ? { videoId: data.videoId } : {}),
         ...(data.notes !== undefined ? { notes: data.notes } : {}),
-        ...(data.videoId !== undefined ? { videoId: data.videoId || null } : {}),
-        ...(data.scheduledAt !== undefined
-          ? { scheduledAt: new Date(data.scheduledAt) }
-          : {}),
       },
     });
     const mapped = mapPrismaEventToItem(updated);
-    const idx = memoryStore.calendarEvents.findIndex((e) => e.id === id);
+    const idx = memoryStore.calendarEvents.findIndex(
+      (e) =>
+        e.id === id &&
+        (e.workspaceId ? e.workspaceId === activeWorkspaceId : e.userId === activeUserId)
+    );
     if (idx !== -1) memoryStore.calendarEvents[idx] = mapped;
     return mapped;
   } catch {
-    const idx = memoryStore.calendarEvents.findIndex((e) => e.id === id);
+    const idx = memoryStore.calendarEvents.findIndex(
+      (e) =>
+        e.id === id &&
+        (e.workspaceId ? e.workspaceId === activeWorkspaceId : e.userId === activeUserId)
+    );
     if (idx === -1) throw new Error(`Calendar event not found: ${id}`);
     const updated: CalendarEvent = {
       ...memoryStore.calendarEvents[idx],
@@ -148,19 +176,36 @@ export async function updateCalendarEventRecord(
 
 export async function deleteCalendarEventRecord(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<boolean> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     await prisma.calendarEvent.delete({
       where: { id, userId: activeUserId },
     });
-    memoryStore.calendarEvents = memoryStore.calendarEvents.filter((e) => e.id !== id);
+    memoryStore.calendarEvents = memoryStore.calendarEvents.filter(
+      (e) =>
+        !(e.id === id && (e.workspaceId ? e.workspaceId === activeWorkspaceId : e.userId === activeUserId))
+    );
     return true;
   } catch {
     const initialLen = memoryStore.calendarEvents.length;
-    memoryStore.calendarEvents = memoryStore.calendarEvents.filter((e) => e.id !== id);
+    memoryStore.calendarEvents = memoryStore.calendarEvents.filter(
+      (e) =>
+        !(e.id === id && (e.workspaceId ? e.workspaceId === activeWorkspaceId : e.userId === activeUserId))
+    );
     return memoryStore.calendarEvents.length < initialLen;
   }
+}
+
+export async function rescheduleCalendarEventRecord(
+  id: string,
+  newScheduledAt: string,
+  userId?: string,
+  workspaceId?: string
+): Promise<CalendarEvent> {
+  return updateCalendarEventRecord(id, { scheduledAt: newScheduledAt }, userId, workspaceId);
 }

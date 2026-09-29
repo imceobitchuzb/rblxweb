@@ -1,6 +1,6 @@
 import { prisma } from "../prisma";
 import { Character, CharacterRole } from "../types";
-import { getCurrentUserId } from "./user-context";
+import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
 import { memoryStore } from "./store";
 
 function mapPrismaCharacterToItem(char: {
@@ -14,6 +14,8 @@ function mapPrismaCharacterToItem(char: {
   avatarUrl: string | null;
   notes: string;
   tags: string[];
+  workspaceId?: string | null;
+  userId?: string;
   createdAt: Date;
   updatedAt: Date;
 }): Character {
@@ -33,38 +35,62 @@ function mapPrismaCharacterToItem(char: {
     avatarUrl: avatarValue,
     notes: char.notes,
     tags: char.tags,
+    workspaceId: char.workspaceId || undefined,
+    userId: char.userId,
     createdAt: char.createdAt.toISOString(),
     updatedAt: char.updatedAt.toISOString(),
   };
 }
 
-export async function getCharacters(userId?: string): Promise<Character[]> {
+export async function getCharacters(userId?: string, workspaceId?: string): Promise<Character[]> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const chars = await prisma.character.findMany({
-      where: { userId: activeUserId },
+      where: {
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
       orderBy: { createdAt: "asc" },
     });
     return chars.map(mapPrismaCharacterToItem);
   } catch {
-    return memoryStore.characters;
+    return memoryStore.characters.filter((c) =>
+      c.workspaceId ? c.workspaceId === activeWorkspaceId : c.userId === activeUserId
+    );
   }
 }
 
 export async function getCharacterById(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<Character | null> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const char = await prisma.character.findFirst({
-      where: { id, userId: activeUserId },
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { userId: activeUserId },
+        ],
+      },
     });
     return char ? mapPrismaCharacterToItem(char) : null;
   } catch {
-    return memoryStore.characters.find((c) => c.id === id) || null;
+    return (
+      memoryStore.characters.find(
+        (c) =>
+          c.id === id &&
+          (c.workspaceId ? c.workspaceId === activeWorkspaceId : c.userId === activeUserId)
+      ) || null
+    );
   }
 }
 
@@ -79,9 +105,11 @@ export async function createCharacterRecord(
     notes?: string;
     tags?: string[];
   },
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<Character> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     await prisma.user.upsert({
@@ -97,6 +125,7 @@ export async function createCharacterRecord(
     const created = await prisma.character.create({
       data: {
         userId: activeUserId,
+        workspaceId: activeWorkspaceId,
         name: data.name,
         role: (data.role || "MAIN") as never,
         description: data.description || "",
@@ -124,6 +153,8 @@ export async function createCharacterRecord(
       avatarUrl: data.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200",
       notes: data.notes || "",
       tags: data.tags || [],
+      workspaceId: activeWorkspaceId,
+      userId: activeUserId,
       createdAt: now,
       updatedAt: now,
     };
@@ -135,9 +166,11 @@ export async function createCharacterRecord(
 export async function updateCharacterRecord(
   id: string,
   data: Partial<Omit<Character, "id" | "createdAt">>,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<Character> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const updated = await prisma.character.update({
@@ -154,11 +187,19 @@ export async function updateCharacterRecord(
       },
     });
     const mapped = mapPrismaCharacterToItem(updated);
-    const idx = memoryStore.characters.findIndex((c) => c.id === id);
+    const idx = memoryStore.characters.findIndex(
+      (c) =>
+        c.id === id &&
+        (c.workspaceId ? c.workspaceId === activeWorkspaceId : c.userId === activeUserId)
+    );
     if (idx !== -1) memoryStore.characters[idx] = mapped;
     return mapped;
   } catch {
-    const idx = memoryStore.characters.findIndex((c) => c.id === id);
+    const idx = memoryStore.characters.findIndex(
+      (c) =>
+        c.id === id &&
+        (c.workspaceId ? c.workspaceId === activeWorkspaceId : c.userId === activeUserId)
+    );
     if (idx === -1) throw new Error(`Character not found: ${id}`);
     const updated: Character = {
       ...memoryStore.characters[idx],
@@ -172,15 +213,22 @@ export async function updateCharacterRecord(
 
 export async function checkCharacterScriptReferences(
   characterId: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<string[]> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
     const usages = await prisma.scriptCharacter.findMany({
       where: {
         characterId,
-        script: { userId: activeUserId },
+        script: {
+          OR: [
+            { workspaceId: activeWorkspaceId },
+            { userId: activeUserId },
+          ],
+        },
       },
       include: {
         script: { select: { title: true } },
@@ -189,7 +237,11 @@ export async function checkCharacterScriptReferences(
     return usages.map((u) => u.script.title);
   } catch {
     const referenced = memoryStore.scripts
-      .filter((s) => s.characters.includes(characterId))
+      .filter(
+        (s) =>
+          (s.workspaceId ? s.workspaceId === activeWorkspaceId : s.userId === activeUserId) &&
+          s.characters.includes(characterId)
+      )
       .map((s) => s.title);
     return referenced;
   }
@@ -197,12 +249,14 @@ export async function checkCharacterScriptReferences(
 
 export async function deleteCharacterRecord(
   id: string,
-  userId?: string
+  userId?: string,
+  workspaceId?: string
 ): Promise<boolean> {
   const activeUserId = userId || (await getCurrentUserId());
+  const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   // 1. Dependency protection: check if character is referenced in scripts
-  const referencingScripts = await checkCharacterScriptReferences(id, activeUserId);
+  const referencingScripts = await checkCharacterScriptReferences(id, activeUserId, activeWorkspaceId);
   if (referencingScripts.length > 0) {
     throw new Error(
       `Cannot delete character: referenced in ${referencingScripts.length} screenplay(s) (${referencingScripts.slice(0, 2).join(", ")}${referencingScripts.length > 2 ? "..." : ""}). Remove character from scripts before deleting.`
@@ -213,11 +267,17 @@ export async function deleteCharacterRecord(
     await prisma.character.delete({
       where: { id, userId: activeUserId },
     });
-    memoryStore.characters = memoryStore.characters.filter((c) => c.id !== id);
+    memoryStore.characters = memoryStore.characters.filter(
+      (c) =>
+        !(c.id === id && (c.workspaceId ? c.workspaceId === activeWorkspaceId : c.userId === activeUserId))
+    );
     return true;
   } catch {
     const initialLen = memoryStore.characters.length;
-    memoryStore.characters = memoryStore.characters.filter((c) => c.id !== id);
+    memoryStore.characters = memoryStore.characters.filter(
+      (c) =>
+        !(c.id === id && (c.workspaceId ? c.workspaceId === activeWorkspaceId : c.userId === activeUserId))
+    );
     return memoryStore.characters.length < initialLen;
   }
 }

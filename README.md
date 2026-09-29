@@ -6,7 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
 ![Prisma](https://img.shields.io/badge/Prisma-5.20-2D3748?style=for-the-badge&logo=prisma)
-![Tests](https://img.shields.io/badge/Tests-77%20Passing-22C55E?style=for-the-badge&logo=node.js)
+![Tests](https://img.shields.io/badge/Tests-87%20Passing-22C55E?style=for-the-badge&logo=node.js)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
 **The Modern Content-Management & Analytics Operating System for Roblox Creators**
@@ -94,9 +94,10 @@ The system ensures complete relational integrity across the creator workflow:
 | **Framework** | [Next.js 14](https://nextjs.org/) (App Router, Server & Client Components) |
 | **Language** | [TypeScript 5](https://www.typescriptlang.org/) (Strict typing mode, 0 errors) |
 | **Styling** | [Tailwind CSS 3](https://tailwindcss.com/) (Dark cyber/gaming design system) |
+| **Authentication** | [bcryptjs](https://github.com/dcodeIO/bcrypt.js) + [jose](https://github.com/panva/jose) (Signed JWT sessions, HTTP-only cookies) |
 | **Icons** | [Lucide React](https://lucide.dev/) |
 | **Database ORM** | [Prisma 5](https://www.prisma.io/) (Relational schema ready for PostgreSQL) |
-| **Testing** | Node.js Test Runner + [tsx](https://github.com/privatenumber/tsx) (66 tests) |
+| **Testing** | Node.js Test Runner + [tsx](https://github.com/privatenumber/tsx) (87 tests) |
 | **Code Quality** | ESLint (`next/core-web-vitals`), Prettier-compatible conventions |
 
 ---
@@ -110,6 +111,9 @@ rblxweb/
 ├── app/                      # Next.js 14 App Router
 │   ├── page.tsx              # Marketing Landing Page
 │   ├── layout.tsx            # Global layout shell (TopNav, Sidebar, CommandPalette)
+│   ├── login/                # Sign In page (/login)
+│   ├── register/             # User & Workspace Registration (/register)
+│   ├── forbidden/            # 403 Access Restricted page (/forbidden)
 │   ├── not-found.tsx         # Custom 404 screen
 │   ├── error.tsx             # React Error Boundary
 │   ├── dashboard/            # Executive overview & pipeline summary
@@ -119,19 +123,26 @@ rblxweb/
 │   ├── videos/               # Video Studio & Asset Pipeline
 │   ├── calendar/             # Content Calendar & Timetable
 │   ├── analytics/            # Creator Intelligence & Multi-Channel Engine
-│   └── settings/             # Studio Preferences & Integrations
+│   └── settings/             # Studio Preferences & Workspace Config
+├── middleware.ts             # Edge route protection & JWT verification
 ├── components/
+│   ├── auth/                 # AuthCard, LoginForm, RegisterForm
 │   ├── command/              # CommandPalette (Ctrl+K)
 │   ├── search/               # Multi-Entity Global Search Modal
 │   ├── notifications/        # NotificationCenter Popover
-│   ├── layout/               # Sidebar, TopNav, Breadcrumbs
+│   ├── layout/               # Sidebar, TopNav (with User & Workspace Menu), Breadcrumbs
 │   └── ui/                   # Button, Card, Badge, Input, Modal, Skeleton
 ├── docs/
 │   ├── ARCHITECTURE.md       # Technical architecture specification
 │   └── screenshots/          # UI screenshot guides & previews
 ├── lib/
-│   ├── types.ts              # Domain TypeScript interfaces
+│   ├── types.ts              # Domain TypeScript interfaces & Auth/Workspace types
 │   ├── constants.ts          # Studio constants & navigation tokens
+│   ├── auth/                 # Authentication & authorization subsystem
+│   │   ├── password.ts       # bcryptjs hashing and verification
+│   │   ├── session.ts        # jose signed JWT tokens & cookie management
+│   │   ├── context.ts        # Session and active workspace resolver
+│   │   └── permissions.ts    # Role-based access control (OWNER, ADMIN, MEMBER)
 │   ├── search-utils.ts       # Global search engine
 │   ├── notification-utils.ts # Deterministic notifications
 │   ├── analytics-utils.ts    # Creator intelligence math formulas
@@ -140,16 +151,17 @@ rblxweb/
 │   ├── calendar-utils.ts     # Calendar grid generation
 │   ├── prisma.ts             # Prisma client singleton & connection tester
 │   └── server/               # Server-side data access & validation
-│       ├── ideas.ts          # Ideas persistence
+│       ├── ideas.ts          # Ideas persistence (workspace-scoped)
 │       ├── characters.ts     # Character persistence & dependency guards
 │       ├── scripts.ts        # Screenplays & scene hierarchy
 │       ├── videos.ts         # Video asset persistence
 │       ├── calendar.ts       # Calendar drop scheduling
 │       ├── analytics.ts      # Database-driven analytics feeder
-│       ├── validation.ts     # Server input validation rules
-│       ├── store.ts          # Offline development fallback store
-│       └── user-context.ts   # User ID abstraction (prepares for Auth)
+│       ├── validation.ts     # Server input validation rules (including Auth)
+│       ├── store.ts          # Offline multi-tenant development fallback store
+│       └── user-context.ts   # User & Workspace Context abstraction
 ├── app/actions/              # Next.js Server Actions ("use server")
+│   ├── auth.ts               # Registration, Login, Logout actions
 │   ├── ideas.ts              # Idea CRUD actions
 │   ├── characters.ts         # Character CRUD actions
 │   ├── scripts.ts            # Screenplay & scene CRUD actions
@@ -157,9 +169,9 @@ rblxweb/
 │   ├── calendar.ts           # Calendar scheduling actions
 │   └── settings.ts           # Studio configuration actions
 ├── prisma/
-│   ├── schema.prisma         # Production PostgreSQL relational schema
+│   ├── schema.prisma         # Production PostgreSQL multi-tenant relational schema
 │   └── seed.ts               # Production demo database seeder
-├── tests/                    # 77 comprehensive automated tests
+├── tests/                    # 87 comprehensive automated tests
 │   ├── architecture.test.ts  # Route and design tokens tests (4 tests)
 │   ├── ideas.test.ts         # Ideas Studio tests (12 tests)
 │   ├── characters.test.ts    # Character Roster tests (6 tests)
@@ -168,7 +180,9 @@ rblxweb/
 │   ├── calendar.test.ts      # Calendar tests (6 tests)
 │   ├── analytics.test.ts     # Analytics engine tests (16 tests)
 │   ├── shell-navigation.test.ts # Search & notification tests (8 tests)
-│   └── database.test.ts      # Persistence, validation & cascade tests (11 tests)
+│   ├── database.test.ts      # Persistence, validation & cascade tests (11 tests)
+│   ├── auth.test.ts          # Password hashing, JWT & auth action tests (7 tests)
+│   └── authorization.test.ts # Multi-tenant isolation & permissions tests (3 tests)
 ├── CHANGELOG.md              # Detailed release history
 └── package.json
 ```
