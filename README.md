@@ -13,9 +13,17 @@ ROXIE HUB is a web application built specifically for Roblox video creators and 
   - **Categories**: `MM2`, `Funny`, `Story`, `Trend`, `Short`, `Long Video`, `Other`
   - **Statuses**: `IDEA` → `PLANNING` → `SCRIPTING` → `PRODUCTION` → `PUBLISHED` → `ARCHIVED`
   - **Priorities**: `LOW`, `MEDIUM`, `HIGH`, `HOT 🔥`
+- **Character Roster**: Complete Roblox avatar and persona library. Store characters with distinct archetypes, detailed outfits, voice/sound acting notes, and personality descriptions. Features cross-module script tracking to see all screenplays where a character appears.
+  - **Roles**: `MAIN`, `SUPPORTING`, `VILLAIN`, `NPC`, `SPECIAL GUEST`
+- **Script Studio**: Interactive 3-pane Roblox screenplay studio.
+  - **3-Pane Studio Layout**: Scene navigation (left), dialogue and speech line editor (center), and live cast inspector with runtime calculation (right).
+  - **Prominent Hook Editor**: Dedicated banner for the video opening hook (3s retention anchor) with character counters.
+  - **Scene System**: Multi-scene breakdown with duration overrides, stage directions, and reordering controls.
+  - **Dialogue System**: Assign character avatars by ID, select emotions (`NEUTRAL`, `HAPPY`, `ANGRY`, `SCARED`, `CONFUSED`, `SUSPICIOUS`, `EXCITED`, `SURPRISED`), and configure speech durations.
+  - **Live Runtime Calculation**: Real-time duration summation (`mm:ss.s`) and metric counters (Scenes, Lines, Cast).
+  - **Script Pipeline**: `DRAFT` → `SCRIPTING` → `READY` → `IN_PRODUCTION` → `COMPLETED` → `ARCHIVED`.
+  - **Cross-Module Linkage**: Convert brainstormed concepts from Ideas Studio into structured screenplays via `ideaId`.
 - **Videos Module**: Multi-platform video asset tracking (YouTube, Shorts, TikTok, Roblox Experiences) with view, like, comment, and duration metrics.
-- **Script Studio**: Structured scene-by-scene script editor with hook engineering, dialogue lines, character assignments, and runtime estimation.
-- **Character Roster**: Roblox avatar library storing characters, roles (`MAIN`, `SUPPORTING`, `VILLAIN`, `NPC`, `SPECIAL GUEST`), personalities, and tags.
 - **Content Calendar**: Release schedule timetable and drag-and-drop planning to safeguard the creator streak.
 - **Content Analytics**: Engagement metrics, average view counts, interaction rates, and time-series performance charts.
 - **Settings**: Creator profile, dark gaming theme customization, notification channels, and external API connection keys.
@@ -142,8 +150,17 @@ npm run build
   - Grid View and Kanban Board with quick status progression
   - Modals for Idea creation, editing, deletion confirmation, and detailed inspection
   - 16 comprehensive unit tests covering filtering, validation, and CRUD operations
-- [ ] **Phase 3: Character Roster & Script Studio**
-  - Character creation cards, scene builder, dialogue block editor, runtime calculation
+- [x] **Phase 3: Character Roster & Script Studio**
+  - Roblox Character Roster with avatar profiles, roles, personality notes, and search/filter controls
+  - 10 realistic Roblox characters (Sheriff Knox, Slick Blade, Bacon Benny, Kage, Blox, etc.)
+  - Script Studio with library view and responsive 3-pane screenplay editor
+  - 5 realistic Roblox animation scripts with dialogue, emotions, and durations
+  - Dedicated video opening hook editor with real-time character counters
+  - Scene management (add, edit, delete, reorder up/down, duration overrides)
+  - Dialogue line editor with character assignment by ID and 8 emotion cues
+  - Live automatic runtime calculation (`mm:ss.s`)
+  - Cross-module relationship linking (Character -> Scripts, Script -> Characters, Idea -> Script)
+  - 29 total unit tests verifying architecture, ideas, characters, scripts, and relationships
 - [ ] **Phase 4: Content Calendar & Video Management**
   - Video asset cards, release scheduling calendar view, platform status badges
 - [ ] **Phase 5: Analytics Dashboard & Creator Profile**
