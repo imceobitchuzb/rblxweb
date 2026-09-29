@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Sparkles,
   ArrowRight,
@@ -11,6 +12,7 @@ import {
   Layers,
   CheckCircle2,
   Tag,
+  FileText,
 } from "lucide-react";
 import { IdeaItem, IdeaStatus } from "@/lib/types";
 import {
@@ -235,6 +237,13 @@ export function IdeaDetailsModal({
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete</span>
             </Button>
+
+            <Link href="/scripts" onClick={onClose}>
+              <Button variant="outline" size="sm" className="text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/10">
+                <FileText className="w-3.5 h-3.5" />
+                <span>Script Studio</span>
+              </Button>
+            </Link>
           </div>
 
           <div>

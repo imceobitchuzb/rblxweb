@@ -107,12 +107,12 @@ export const SCRIPT_STATUS_CONFIG: Record<
   ScriptStatus,
   { label: string; bg: string; text: string; dot: string }
 > = {
-  DRAFT: { bg: "bg-slate-800/60", text: "text-slate-300", dot: "bg-slate-400" },
-  SCRIPTING: { bg: "bg-purple-900/40", text: "text-purple-300", dot: "bg-purple-400" },
-  READY: { bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
-  IN_PRODUCTION: { bg: "bg-amber-900/40", text: "text-amber-300", dot: "bg-amber-400" },
-  COMPLETED: { bg: "bg-emerald-900/40", text: "text-emerald-300", dot: "bg-emerald-400" },
-  ARCHIVED: { bg: "bg-zinc-800/40", text: "text-zinc-400", dot: "bg-zinc-500" },
+  DRAFT: { label: "Draft", bg: "bg-slate-800/60", text: "text-slate-300", dot: "bg-slate-400" },
+  SCRIPTING: { label: "Scripting", bg: "bg-purple-900/40", text: "text-purple-300", dot: "bg-purple-400" },
+  READY: { label: "Ready", bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
+  IN_PRODUCTION: { label: "In Production", bg: "bg-amber-900/40", text: "text-amber-300", dot: "bg-amber-400" },
+  COMPLETED: { label: "Completed", bg: "bg-emerald-900/40", text: "text-emerald-300", dot: "bg-emerald-400" },
+  ARCHIVED: { label: "Archived", bg: "bg-zinc-800/40", text: "text-zinc-400", dot: "bg-zinc-500" },
 };
 
 export const ALL_EMOTIONS: DialogueEmotion[] = [

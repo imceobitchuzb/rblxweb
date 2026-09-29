@@ -1,95 +1,281 @@
-import { FileText, Plus, Film, Clock, MessageSquare, Users } from "lucide-react";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+"use client";
+
+import * as React from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import {
+  FileText,
+  Plus,
+  Search,
+  Filter,
+  X,
+  Lightbulb,
+  Clock,
+  Sparkles,
+} from "lucide-react";
+import { Character, IdeaItem, Script, ScriptStatus } from "@/lib/types";
+import {
+  ALL_SCRIPT_STATUSES,
+  SCRIPT_STATUS_CONFIG,
+  SCRIPT_STATUS_LABELS,
+} from "@/lib/constants";
+import { INITIAL_SCRIPTS } from "@/lib/mock-scripts";
+import { INITIAL_CHARACTERS } from "@/lib/mock-characters";
+import { INITIAL_IDEAS } from "@/lib/mock-ideas";
+import { filterScripts } from "@/lib/roster-script-utils";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ScriptCard } from "@/components/scripts/ScriptCard";
+import { CreateScriptModal } from "@/components/scripts/CreateScriptModal";
+import { ScriptEditor } from "@/components/scripts/ScriptEditor";
+import { DeleteScriptDialog } from "@/components/scripts/DeleteScriptDialog";
+import { cn } from "@/lib/utils";
 
-const SCRIPT_COMPONENTS = [
-  {
-    icon: Film,
-    title: "Dynamic Scene Builder",
-    description: "Add, reorder, and estimate timing per scene for tight pacing.",
-  },
-  {
-    icon: MessageSquare,
-    title: "Dialogue & Sound Cues",
-    description: "Assign lines to Roblox avatars and time audio soundboard cues.",
-  },
-  {
-    icon: Users,
-    title: "Character Cast Integration",
-    description: "Tag characters directly from your Roblox avatar roster.",
-  },
-  {
-    icon: Clock,
-    title: "Smart Duration Calculation",
-    description: "Live calculation of total script runtime based on dialogue & scenes.",
-  },
-];
+function ScriptsContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-export default function ScriptsPage() {
+  // State
+  const [scripts, setScripts] = React.useState<Script[]>(INITIAL_SCRIPTS);
+  const [characters] = React.useState<Character[]>(INITIAL_CHARACTERS);
+  const [ideas] = React.useState<IdeaItem[]>(INITIAL_IDEAS);
+
+  // Active script in editor (if null, display library view)
+  const [activeScriptId, setActiveScriptId] = React.useState<string | null>(null);
+
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedStatus, setSelectedStatus] = React.useState<string>("ALL");
+
+  // Modals state
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [deletingScript, setDeletingScript] = React.useState<Script | null>(null);
+
+  // Check URL param on mount or URL change
+  React.useEffect(() => {
+    const idParam = searchParams.get("id");
+    if (idParam && scripts.some((s) => s.id === idParam)) {
+      setActiveScriptId(idParam);
+    }
+  }, [searchParams, scripts]);
+
+  // Active script object
+  const activeScript = React.useMemo(() => {
+    return scripts.find((s) => s.id === activeScriptId) || null;
+  }, [scripts, activeScriptId]);
+
+  // Filtered scripts
+  const filteredScripts = React.useMemo(() => {
+    return filterScripts(scripts, {
+      search: searchTerm,
+      status: selectedStatus,
+    });
+  }, [scripts, searchTerm, selectedStatus]);
+
+  const hasActiveFilters = Boolean(searchTerm.trim()) || selectedStatus !== "ALL";
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setSelectedStatus("ALL");
+  };
+
+  // CRUD Handlers
+  const handleCreateScript = (newScript: Script) => {
+    setScripts((prev) => [newScript, ...prev]);
+    setActiveScriptId(newScript.id);
+  };
+
+  const handleSaveScript = (updatedScript: Script) => {
+    setScripts((prev) =>
+      prev.map((s) => (s.id === updatedScript.id ? updatedScript : s))
+    );
+  };
+
+  const handleDeleteScript = (script: Script) => {
+    setScripts((prev) => prev.filter((s) => s.id !== script.id));
+    if (activeScriptId === script.id) {
+      setActiveScriptId(null);
+    }
+  };
+
+  const handleCloseEditor = () => {
+    setActiveScriptId(null);
+    router.replace("/scripts");
+  };
+
+  // If a script is opened, show the 3-pane Script Studio Editor!
+  if (activeScript) {
+    return (
+      <ScriptEditor
+        script={activeScript}
+        characters={characters}
+        onBack={handleCloseEditor}
+        onSaveScript={handleSaveScript}
+      />
+    );
+  }
+
+  // Otherwise, render the Script Library List view
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Script Studio
-            </h2>
-            <Badge variant="purple" size="sm">
-              Module Scaffold
-            </Badge>
+            </h1>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/30 font-semibold">
+              Roblox Screenplay OS
+            </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Structured scene-by-scene script editor designed for Roblox storytelling and skits.
+            Write structured scene-by-scene scripts, dialogue cues, and character lines.
           </p>
         </div>
 
-        <Button variant="primary" size="sm" disabled>
-          <Plus className="w-3.5 h-3.5" />
+        <Button
+          variant="primary"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          <Plus className="w-4 h-4" />
           <span>New Script</span>
         </Button>
       </div>
 
-      {/* Blueprint Feature Cards */}
-      <Card variant="glass">
-        <CardHeader>
-          <CardTitle>Script Editor Capabilities</CardTitle>
-          <Badge variant="neon" size="sm">
-            Phase 1
-          </Badge>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {SCRIPT_COMPONENTS.map((item) => {
-              const Icon = item.icon;
+      {/* Search and Filters Bar */}
+      <div className="glass-panel p-4 rounded-2xl border border-white/[0.06] space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="flex-1 max-w-md relative">
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search scripts by title, hook, or tags..."
+              icon={<Search className="w-4 h-4" />}
+              className="bg-surface-canvas/90 h-10 text-xs"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Status Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <button
+              onClick={() => setSelectedStatus("ALL")}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap",
+                selectedStatus === "ALL"
+                  ? "bg-violet-600 text-white shadow-sm"
+                  : "bg-surface-canvas/70 text-slate-400 hover:text-white border border-white/5"
+              )}
+            >
+              All Statuses ({scripts.length})
+            </button>
+
+            {ALL_SCRIPT_STATUSES.map((st) => {
+              const count = scripts.filter((s) => s.status === st).length;
+              const isSelected = selectedStatus === st;
               return (
-                <div
-                  key={item.title}
-                  className="p-3.5 rounded-xl bg-surface-canvas/60 border border-white/5 space-y-1.5"
+                <button
+                  key={st}
+                  onClick={() => setSelectedStatus(st)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap",
+                    isSelected
+                      ? "bg-violet-600 text-white shadow-sm"
+                      : "bg-surface-canvas/70 text-slate-400 hover:text-white border border-white/5"
+                  )}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <h4 className="text-xs font-bold text-white">{item.title}</h4>
-                  <p className="text-[11px] text-slate-400 leading-normal">
-                    {item.description}
-                  </p>
-                </div>
+                  {SCRIPT_STATUS_LABELS[st]} ({count})
+                </button>
               );
             })}
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Empty State */}
-      <EmptyState
-        icon={FileText}
-        title="Script Studio Initialized"
-        badge="Phase 1 Active"
-        description="The scene-by-scene script editor schema and data structures are defined and ready for UI implementation."
+        {/* Counter & Reset */}
+        <div className="flex items-center justify-between pt-2 border-t border-white/[0.04] text-xs">
+          <div className="text-slate-400">
+            Showing <strong className="text-white">{filteredScripts.length}</strong> of{" "}
+            <strong className="text-white">{scripts.length}</strong> scripts
+          </div>
+
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilters}
+              className="text-xs text-violet-400 hover:text-violet-300 h-7 px-2"
+            >
+              Reset Filters
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Scripts Library Grid */}
+      {scripts.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          title="No scripts created yet"
+          badge="Empty Studio"
+          description="Create your first Roblox screenplay to script dialogue, hooks, and scene pacing."
+          actionLabel="Create First Script"
+          onAction={() => setIsCreateModalOpen(true)}
+        />
+      ) : filteredScripts.length === 0 ? (
+        <EmptyState
+          icon={Filter}
+          title="No scripts match your search"
+          badge="Filter Result"
+          description="Try broadening your search query or selecting a different status filter."
+          actionLabel="Reset Filters"
+          onAction={handleResetFilters}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredScripts.map((script) => (
+            <ScriptCard
+              key={script.id}
+              script={script}
+              onOpen={(s) => setActiveScriptId(s.id)}
+              onDelete={(s) => setDeletingScript(s)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Create Script Modal (Scratch or From Idea) */}
+      <CreateScriptModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        availableIdeas={ideas}
+        onSubmit={handleCreateScript}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteScriptDialog
+        isOpen={Boolean(deletingScript)}
+        script={deletingScript}
+        onClose={() => setDeletingScript(null)}
+        onConfirm={handleDeleteScript}
       />
     </div>
+  );
+}
+
+export default function ScriptsPage() {
+  return (
+    <React.Suspense fallback={<div className="p-8 text-center text-slate-400">Loading Script Studio...</div>}>
+      <ScriptsContent />
+    </React.Suspense>
   );
 }
