@@ -161,11 +161,20 @@ npm run build
   - Live automatic runtime calculation (`mm:ss.s`)
   - Cross-module relationship linking (Character -> Scripts, Script -> Characters, Idea -> Script)
   - 29 total unit tests verifying architecture, ideas, characters, scripts, and relationships
-- [ ] **Phase 4: Content Calendar & Video Management**
-  - Video asset cards, release scheduling calendar view, platform status badges
+- [x] **Phase 4: Video Studio & Content Calendar**
+  - **Video Studio (`/videos`)**: Complete video asset management platform with 10 realistic Roblox creator video assets across 4 platforms (`YouTube Shorts`, `YouTube`, `TikTok`, `Instagram Reels`)
+  - **Video Status Workflow**: Track videos across `PLANNING` → `IN_PRODUCTION` → `EDITING` → `READY` → `SCHEDULED` → `PUBLISHED` → `ARCHIVED`
+  - **Multi-Field Filtering & Sorting**: Instant search across titles, descriptions, and tags; filter by platform and workflow status; sort by publication date, views, duration, or title
+  - **Video Details Dossier**: Interactive modal with simulated media player HUD, performance metrics (Views, Likes, Comments, Engagement Rate %), assigned character cast, linked screenplay source, and origin idea
+  - **Script → Video Conversion**: One-click action in Script Studio to generate prefilled video assets directly from screenplays
+  - **Content Calendar (`/calendar`)**: Responsive Month and Week timeline views with intuitive period navigation (`<`, `Today`, `>`), search and platform/type/status filtering
+  - **Event Scheduling System**: Schedule publication drops (`VIDEO`, `UPLOAD`, `PREMIERE`, `IDEA`, `DEADLINE`) with automatic video status synchronization
+  - **Upcoming Drops Panel**: Chronological upcoming release watchlist with date and time breakdowns
+  - **Dashboard Command Center (`/dashboard`)**: Interactive creator pipeline stage overview (`IDEAS → SCRIPTS → VIDEOS → SCHEDULED → PUBLISHED`), upcoming drops schedule, top published release showcases, and consistency streak tracker
+  - **42 Unit Tests Passing**: Full verification of video integrity, calendar math, filtering, scheduling, and cross-module ID preservation
 - [ ] **Phase 5: Analytics Dashboard & Creator Profile**
   - Key performance indicators, interactive charts, engagement breakdowns
 - [ ] **Phase 6: Persistence & External Integrations**
-  - PostgreSQL live connection via Prisma (seamlessly swapping the `lib/mock-ideas.ts` local state with server actions / API routes without UI rewrites)
+  - PostgreSQL live connection via Prisma (seamlessly swapping local mock state with server actions / API routes without UI rewrites)
   - YouTube Data API v3 and TikTok Creator API sync
   - AI script and hook assistant
