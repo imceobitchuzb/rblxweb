@@ -1,32 +1,89 @@
 # ROXIE HUB 🎮
 
-> **The Modern Content-Management & Analytics Operating System for Roblox Creators**
+<div align="center">
 
-ROXIE HUB is a web application built specifically for Roblox video creators and studio directors. It streamlines every phase of Roblox content production: brainstorming ideas, organizing character rosters, scripting dialogue and scenes, managing multi-platform publication schedules (YouTube, YouTube Shorts, TikTok), and tracking growth analytics.
+![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
+![Prisma](https://img.shields.io/badge/Prisma-5.20-2D3748?style=for-the-badge&logo=prisma)
+![Tests](https://img.shields.io/badge/Tests-66%20Passing-22C55E?style=for-the-badge&logo=node.js)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+
+**The Modern Content-Management & Analytics Operating System for Roblox Creators**
+
+[Explore Architecture](docs/ARCHITECTURE.md) • [View Changelog](CHANGELOG.md) • [Screenshots Guide](docs/screenshots/README.md)
+
+</div>
 
 ---
 
-## 🚀 Features & Modules
+## 🎯 Executive Overview
 
-- **Dashboard**: Unified overview of upload streaks, quick stats, content pipeline status, and immediate actions.
-- **Ideas Studio**: Comprehensive idea incubator for Roblox creators featuring multi-filter search, priority ratings, potential viral score gauges, Grid & Kanban views, idea creation/editing dialogs, and linear status pipeline transitions.
-  - **Categories**: `MM2`, `Funny`, `Story`, `Trend`, `Short`, `Long Video`, `Other`
-  - **Statuses**: `IDEA` → `PLANNING` → `SCRIPTING` → `PRODUCTION` → `PUBLISHED` → `ARCHIVED`
-  - **Priorities**: `LOW`, `MEDIUM`, `HIGH`, `HOT 🔥`
-- **Character Roster**: Complete Roblox avatar and persona library. Store characters with distinct archetypes, detailed outfits, voice/sound acting notes, and personality descriptions. Features cross-module script tracking to see all screenplays where a character appears.
-  - **Roles**: `MAIN`, `SUPPORTING`, `VILLAIN`, `NPC`, `SPECIAL GUEST`
-- **Script Studio**: Interactive 3-pane Roblox screenplay studio.
-  - **3-Pane Studio Layout**: Scene navigation (left), dialogue and speech line editor (center), and live cast inspector with runtime calculation (right).
-  - **Prominent Hook Editor**: Dedicated banner for the video opening hook (3s retention anchor) with character counters.
-  - **Scene System**: Multi-scene breakdown with duration overrides, stage directions, and reordering controls.
-  - **Dialogue System**: Assign character avatars by ID, select emotions (`NEUTRAL`, `HAPPY`, `ANGRY`, `SCARED`, `CONFUSED`, `SUSPICIOUS`, `EXCITED`, `SURPRISED`), and configure speech durations.
-  - **Live Runtime Calculation**: Real-time duration summation (`mm:ss.s`) and metric counters (Scenes, Lines, Cast).
-  - **Script Pipeline**: `DRAFT` → `SCRIPTING` → `READY` → `IN_PRODUCTION` → `COMPLETED` → `ARCHIVED`.
-  - **Cross-Module Linkage**: Convert brainstormed concepts from Ideas Studio into structured screenplays via `ideaId`.
-- **Videos Module**: Multi-platform video asset tracking (YouTube, Shorts, TikTok, Roblox Experiences) with view, like, comment, and duration metrics.
-- **Content Calendar**: Release schedule timetable and drag-and-drop planning to safeguard the creator streak.
-- **Content Analytics**: Engagement metrics, average view counts, interaction rates, and time-series performance charts.
-- **Settings**: Creator profile, dark gaming theme customization, notification channels, and external API connection keys.
+**ROXIE HUB** is a high-performance, production-quality creator operating system built specifically for Roblox gaming content creators and animation directors. It transforms chaotic video concepts into a structured, relational production pipeline:
+
+```
++-----------------------------------------------------------------------------------------------+
+|                                    ROBLOX CREATOR PIPELINE                                    |
+|                                                                                               |
+|  [ IDEAS STUDIO ] ──> [ SCRIPT STUDIO ] ──> [ VIDEO STUDIO ] ──> [ CALENDAR ] ──> [ANALYTICS] |
+|   Viral Score (1-10)    Multi-Scene Script    Multi-Platform      Drop Schedule    Cross-Plat |
+|   Kanban & Grid Board   Dialogue & Runtime    YouTube/TikTok      Month & Week     Insights   |
++-----------------------------------------------------------------------------------------------+
+```
+
+The system ensures complete relational integrity across the creator workflow:
+- Brainstorm an **Idea** with viral potential ratings and tags.
+- Convert that Idea into a structured **Screenplay** with character assignment and duration estimation.
+- Advance the Screenplay into a **Video Production Asset** tracking thumbnails and edits.
+- Place the Video directly on the **Publishing Calendar** to protect upload streaks.
+- Evaluate real-world performance in **Creator Intelligence & Analytics**.
+
+---
+
+## ✨ Features & Modules
+
+### 🚀 High-Converting Landing Page (`/`)
+- Public marketing showcase featuring a dynamic hero section, live pipeline metrics, visual 5-stage creator workflow roadmap, and an interactive 6-module feature grid.
+
+### 💡 Ideas Studio (`/ideas`)
+- Dual-mode view: **Interactive Kanban Board** and responsive **Card Grid**.
+- Filter by Roblox category (`MM2`, `BEDWARS`, `BROOKHAVEN`, `DOORS`, `ANIME_DEFENDERS`, `TRENDS`, `OTHER`).
+- Track viral potential score (1-10), priority (`HOT 🔥`, `HIGH`, `MEDIUM`, `LOW`), and stage progression.
+- One-click **"Convert to Script"** factory action with metadata inheritance.
+
+### 🎭 Character Roster (`/characters`)
+- Roblox avatar and persona library with avatars, roles (`MAIN`, `SUPPORTING`, `VILLAIN`, `NPC`), outfits, personalities, and acting notes.
+- Reverse relational lookups displaying all screenplays and videos featuring each character.
+
+### 📝 Screenplay Studio (`/scripts`)
+- Professional 3-pane scriptwriting interface:
+  - **Left**: Scene outline and reordering.
+  - **Center**: Dialogue lines with character IDs, 8 emotion cues, and stage directions.
+  - **Right**: Cast inspector and live runtime duration calculation (`mm:ss.s`).
+- Dedicated video opening hook editor with real-time character count.
+
+### 🎬 Video Studio (`/videos`)
+- Multi-platform video production pipeline: **YouTube**, **YouTube Shorts**, **TikTok**, and **Instagram Reels**.
+- Video stages: `PLANNING` → `IN_PRODUCTION` → `EDITING` → `READY` → `SCHEDULED` → `PUBLISHED`.
+- Media preview player HUD, asset linking, and relational screenplay back-links.
+
+### 📅 Content Calendar (`/calendar`)
+- Monthly and weekly interactive timetable views.
+- Schedule video drops, livestreams, and community posts.
+- Direct synchronization with Video Studio publication statuses.
+
+### 📊 Creator Intelligence & Analytics (`/analytics`)
+- Mathematical analytics engine calculating Total Views, Average Views, Interaction Counts, and Engagement Rate `%`.
+- Interactive time-range filtering (`7D`, `30D`, `90D`, `ALL`) and platform breakdown.
+- Responsive Views-by-Date time-series curves.
+- Character ROI leaderboard correlating character appearances with engagement.
+- Automated algorithmic creator insights.
+
+### ⌨️ Shell & Global Navigation
+- **Command Palette (`Ctrl + K` / `Cmd + K`)**: Instant studio navigation and creator quick-actions.
+- **Unified Global Search**: Multi-entity instant search indexing across Ideas, Characters, Scripts, and Videos.
+- **Notification Center**: Bell popover in TopNav deriving deterministic notifications from active records.
+- **Custom Error & 404 Screens**: Dark gaming themed error handling and recovery.
 
 ---
 
@@ -34,159 +91,105 @@ ROXIE HUB is a web application built specifically for Roblox video creators and 
 
 | Layer | Technology |
 | :--- | :--- |
-| **Framework** | [Next.js](https://nextjs.org/) (App Router, Server & Client Components) |
-| **Language** | [TypeScript](https://www.typescriptlang.org/) (Strict typing mode) |
-| **Styling** | [Tailwind CSS](https://tailwindcss.com/) (Custom gaming dark theme & glassmorphic tokens) |
+| **Framework** | [Next.js 14](https://nextjs.org/) (App Router, Server & Client Components) |
+| **Language** | [TypeScript 5](https://www.typescriptlang.org/) (Strict typing mode, 0 errors) |
+| **Styling** | [Tailwind CSS 3](https://tailwindcss.com/) (Dark cyber/gaming design system) |
 | **Icons** | [Lucide React](https://lucide.dev/) |
-| **Database ORM** | [Prisma](https://www.prisma.io/) (PostgreSQL target architecture) |
-| **Testing** | Node.js Test Runner + [tsx](https://github.com/privatenumber/tsx) |
-| **Tooling** | ESLint, PostCSS, Autoprefixer |
+| **Database ORM** | [Prisma 5](https://www.prisma.io/) (Relational schema ready for PostgreSQL) |
+| **Testing** | Node.js Test Runner + [tsx](https://github.com/privatenumber/tsx) (66 tests) |
+| **Code Quality** | ESLint (`next/core-web-vitals`), Prettier-compatible conventions |
 
 ---
 
-## 📂 Project Structure
+## 📂 Architecture & Directory Structure
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical specifications and component diagrams.
 
 ```text
 rblxweb/
-├── app/                      # Next.js App Router root
-│   ├── globals.css           # Custom dark gaming styles, glass panels, neon glows
-│   ├── layout.tsx            # Root layout with font injection & AppShell wrapper
-│   ├── page.tsx              # Root route redirecting to /dashboard
-│   ├── dashboard/            # Overview dashboard
-│   ├── ideas/                # Ideas incubator & classification
-│   ├── videos/               # Video metadata & multi-platform hub
-│   ├── scripts/              # Structured scene-by-scene script studio
-│   ├── characters/           # Roblox avatar and character roster
-│   ├── calendar/             # Content timetable & release scheduler
-│   ├── analytics/            # Performance analytics & metrics
-│   └── settings/             # Creator settings & integrations
+├── app/                      # Next.js 14 App Router
+│   ├── page.tsx              # Marketing Landing Page
+│   ├── layout.tsx            # Global layout shell (TopNav, Sidebar, CommandPalette)
+│   ├── not-found.tsx         # Custom 404 screen
+│   ├── error.tsx             # React Error Boundary
+│   ├── dashboard/            # Executive overview & pipeline summary
+│   ├── ideas/                # Ideas Studio (Grid / Kanban)
+│   ├── characters/           # Character Roster & Dossiers
+│   ├── scripts/              # Screenplay Studio & Scene Editor
+│   ├── videos/               # Video Studio & Asset Pipeline
+│   ├── calendar/             # Content Calendar & Timetable
+│   ├── analytics/            # Creator Intelligence & Multi-Channel Engine
+│   └── settings/             # Studio Preferences & Integrations
 ├── components/
-│   ├── layout/               # Application shell, Sidebar, TopNav, MobileNav
-│   └── ui/                   # Modular UI primitives (Button, Card, Badge, Input, EmptyState)
+│   ├── command/              # CommandPalette (Ctrl+K)
+│   ├── search/               # Multi-Entity Global Search Modal
+│   ├── notifications/        # NotificationCenter Popover
+│   ├── layout/               # Sidebar, TopNav, Breadcrumbs
+│   └── ui/                   # Button, Card, Badge, Input, Modal, Skeleton
+├── docs/
+│   ├── ARCHITECTURE.md       # Technical architecture specification
+│   └── screenshots/          # UI screenshot guides & previews
 ├── lib/
-│   ├── constants.ts          # Navigation links, colors, platform maps, default creator
-│   ├── types.ts              # Strict TypeScript domain interfaces
-│   └── utils.ts              # Class merging (cn), metric & duration formatters
+│   ├── types.ts              # Domain TypeScript interfaces
+│   ├── constants.ts          # Studio constants & navigation tokens
+│   ├── search-utils.ts       # Global search engine
+│   ├── notification-utils.ts # Deterministic notifications
+│   ├── analytics-utils.ts    # Creator intelligence math formulas
+│   ├── video-utils.ts        # Video pipeline operations
+│   ├── script-utils.ts       # Script runtime calculations
+│   └── calendar-utils.ts     # Calendar grid generation
 ├── prisma/
-│   └── schema.prisma         # PostgreSQL schema for Ideas, Videos, Scripts, Characters
-├── tests/
-│   └── architecture.test.ts  # Route, metric, and schema tests
-├── .env.example              # Documented environment variables template
-├── package.json              # Project manifests and scripts
-├── tailwind.config.ts        # Custom dark gaming color palette and design system
-└── tsconfig.json             # TypeScript compiler settings
+│   └── schema.prisma         # Prepared PostgreSQL relational schema
+├── tests/                    # 66 comprehensive unit tests
+│   ├── architecture.test.ts  # Route and design tokens tests
+│   ├── ideas.test.ts         # Ideas Studio tests (13 tests)
+│   ├── characters.test.ts    # Character Roster tests (6 tests)
+│   ├── scripts.test.ts       # Script Studio tests (7 tests)
+│   ├── videos.test.ts        # Video Studio tests (7 tests)
+│   ├── calendar.test.ts      # Calendar tests (6 tests)
+│   ├── analytics.test.ts     # Analytics engine tests (15 tests)
+│   └── shell-navigation.test.ts # Search & notification tests (8 tests)
+├── CHANGELOG.md              # Detailed release history
+└── package.json
 ```
 
 ---
 
-## 💻 Development Instructions
+## 🧪 Verification & Testing
 
-### Prerequisites
-
-- **Node.js** 20.x or higher
-- **npm** 10.x or higher
-
-### 1. Install Dependencies
+Every major domain feature is backed by isolated unit tests using pure functions:
 
 ```bash
-npm install
-```
-
-### 2. Configure Environment
-
-Copy `.env.example` to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-### 3. Generate Prisma Client
-
-```bash
-npm run prisma:generate # or npx prisma generate
-```
-
-### 4. Run Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### 5. Run Lint, Typecheck & Tests
-
-```bash
-# Run unit tests
+# Run the complete test suite (66 tests)
 npm test
 
-# Run TypeScript type check
+# Run TypeScript strict type-check
 npm run typecheck
 
-# Run ESLint
+# Run ESLint across app, components, lib, and tests
 npm run lint
 
-# Production build test
+# Build production bundle
 npm run build
 ```
 
 ---
 
-## 🗺️ Engineering Roadmap
+## 🗺️ Product Roadmap
 
-- [x] **Phase 1: Foundation & Application Shell**
-  - Next.js + TypeScript + Tailwind CSS dark gaming identity
-  - Responsive AppShell with persistent desktop Sidebar, mobile drawer, and TopNav
-  - Placeholder route scaffolding for all 8 modules
-  - Core UI primitives (`Button`, `Card`, `Badge`, `Input`, `EmptyState`)
-  - Prisma schema architecture & unit tests
-- [x] **Phase 2: Ideas Studio & Local Data Layer**
-  - 18 realistic Roblox content ideas (Murder Mystery 2, skits, challenges, trends)
-  - Interactive Ideas Studio with real-time multi-filter search (title, description, tags)
-  - Category filters (`MM2`, `Funny`, `Story`, `Trend`, `Short`, `Long Video`, `Other`)
-  - Status filters (`IDEA`, `PLANNING`, `SCRIPTING`, `PRODUCTION`, `PUBLISHED`, `ARCHIVED`)
-  - Priority levels with neon glowing emphasis for `HOT 🔥`
-  - Dynamic summary metrics (Total, Hot, Planning, Production, Published)
-  - Grid View and Kanban Board with quick status progression
-  - Modals for Idea creation, editing, deletion confirmation, and detailed inspection
-  - 16 comprehensive unit tests covering filtering, validation, and CRUD operations
-- [x] **Phase 3: Character Roster & Script Studio**
-  - Roblox Character Roster with avatar profiles, roles, personality notes, and search/filter controls
-  - 10 realistic Roblox characters (Sheriff Knox, Slick Blade, Bacon Benny, Kage, Blox, etc.)
-  - Script Studio with library view and responsive 3-pane screenplay editor
-  - 5 realistic Roblox animation scripts with dialogue, emotions, and durations
-  - Dedicated video opening hook editor with real-time character counters
-  - Scene management (add, edit, delete, reorder up/down, duration overrides)
-  - Dialogue line editor with character assignment by ID and 8 emotion cues
-  - Live automatic runtime calculation (`mm:ss.s`)
-  - Cross-module relationship linking (Character -> Scripts, Script -> Characters, Idea -> Script)
-  - 29 total unit tests verifying architecture, ideas, characters, scripts, and relationships
-- [x] **Phase 4: Video Studio & Content Calendar**
-  - **Video Studio (`/videos`)**: Complete video asset management platform with 10 realistic Roblox creator video assets across 4 platforms (`YouTube Shorts`, `YouTube`, `TikTok`, `Instagram Reels`)
-  - **Video Status Workflow**: Track videos across `PLANNING` → `IN_PRODUCTION` → `EDITING` → `READY` → `SCHEDULED` → `PUBLISHED` → `ARCHIVED`
-  - **Multi-Field Filtering & Sorting**: Instant search across titles, descriptions, and tags; filter by platform and workflow status; sort by publication date, views, duration, or title
-  - **Video Details Dossier**: Interactive modal with simulated media player HUD, performance metrics (Views, Likes, Comments, Engagement Rate %), assigned character cast, linked screenplay source, and origin idea
-  - **Script → Video Conversion**: One-click action in Script Studio to generate prefilled video assets directly from screenplays
-  - **Content Calendar (`/calendar`)**: Responsive Month and Week timeline views with intuitive period navigation (`<`, `Today`, `>`), search and platform/type/status filtering
-  - **Event Scheduling System**: Schedule publication drops (`VIDEO`, `UPLOAD`, `PREMIERE`, `IDEA`, `DEADLINE`) with automatic video status synchronization
-  - **Upcoming Drops Panel**: Chronological upcoming release watchlist with date and time breakdowns
-  - **Dashboard Command Center (`/dashboard`)**: Interactive creator pipeline stage overview (`IDEAS → SCRIPTS → VIDEOS → SCHEDULED → PUBLISHED`), upcoming drops schedule, top published release showcases, and consistency streak tracker
-  - **42 Unit Tests Passing**: Full verification of video integrity, calendar math, filtering, scheduling, and cross-module ID preservation
-- [x] **Phase 5: Analytics & Creator Intelligence**
-  - **Analytics Engine (`/analytics`)**: Full-featured creator intelligence suite with pure mathematical derivation layer (`lib/analytics-utils.ts`)
-  - **Unified Filtering Layer**: Combined Time Range (`7D`, `30D`, `90D`, `ALL`) and Platform filters (`YouTube Shorts`, `YouTube`, `TikTok`, `Instagram Reels`) updating all components reactively
-  - **KPI Dashboard Cards**: Total Views, Average Views per video, Average Engagement Rate %, and Published Video counts with secondary contextual metrics
-  - **Views Over Time Chart**: Responsive SVG-based curve with area gradients, axis labels, interactive hover tooltips, and empty-state support
-  - **Engagement Rate Trend Chart**: Time-series curve tracking `((likes + comments) / views) * 100` with horizontal average benchmark line
-  - **Multi-Channel Platform Breakdown**: Factual, side-by-side performance cards (videos, views, avg views, likes, comments, engagement rate) across all 4 platforms
-  - **Publishing Pipeline Cadence**: Factual timeline tracking published uploads, scheduled drops, and in-production assets
-  - **Top Content Leaderboard**: Expandable table of published videos sorted by views with direct linkage to Video Details dossiers
-  - **Content Segments Analysis**: Performance breakdowns across Roblox categories (from linked Ideas), formats (Short vs Long Video), and runtime brackets
-  - **Character Cast Performance**: Aggregate appearances, total views, average views, and engagement rates for characters in published videos
-  - **Creator Intelligence Insights**: Evidence-based, non-speculative observations derived directly from dataset math
-  - **Compact Dashboard Summary**: High-level KPI strip on `/dashboard` with one-click navigation to `/analytics`
-  - **58 Unit Tests Passing**: Comprehensive verification of metrics math, zero-view safety, multi-filter combinations, time-series aggregation, and formatters
-- [ ] **Phase 6: Persistence & External Integrations**
-  - PostgreSQL live connection via Prisma (seamlessly swapping local mock state with server actions / API routes without UI rewrites)
-  - YouTube Data API v3 and TikTok Creator API sync
-  - AI script and hook assistant
+- [x] **Phase 1**: Foundation, Architecture, AppShell & Design System
+- [x] **Phase 2**: Ideas Studio (Kanban & Grid, filters, CRUD)
+- [x] **Phase 3**: Character Roster & 3-Pane Script Studio
+- [x] **Phase 4**: Video Studio & Content Calendar Pipeline
+- [x] **Phase 5**: Multi-Channel Analytics & Creator Intelligence
+- [x] **Phase 5.5**: UX Shell, Global Search, Command Palette (Ctrl+K), Notification Center, Landing Page, Documentation
+- [ ] **Phase 6**: PostgreSQL Persistence with Prisma Client & Server Actions
+- [ ] **Phase 7**: Authentication & Multi-Creator Studio Workspaces
+- [ ] **Phase 8**: Live YouTube Data API v3 & TikTok Creator API Integrations
+- [ ] **Phase 9**: AI Assistant for Roblox Scriptwriting & Thumbnail Concepting
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.

@@ -8,9 +8,17 @@ import {
   Gamepad2,
   ChevronRight,
   Sparkles,
-  Layers,
+  Github,
+  LayoutDashboard,
+  Lightbulb,
+  Users,
+  FileText,
+  Video as VideoIcon,
+  Calendar,
+  BarChart3,
+  Settings,
 } from "lucide-react";
-import { MAIN_NAV_ITEMS, DEFAULT_CREATOR } from "@/lib/constants";
+import { DEFAULT_CREATOR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 
@@ -18,6 +26,20 @@ interface SidebarProps {
   className?: string;
   onNavigate?: () => void;
 }
+
+const WORKSPACE_NAV_ITEMS = [
+  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Ideas Hub", href: "/ideas", icon: Lightbulb },
+  { title: "Characters", href: "/characters", icon: Users },
+  { title: "Script Studio", href: "/scripts", icon: FileText },
+  { title: "Videos", href: "/videos", icon: VideoIcon },
+  { title: "Content Calendar", href: "/calendar", icon: Calendar },
+  { title: "Analytics", href: "/analytics", icon: BarChart3 },
+];
+
+const SYSTEM_NAV_ITEMS = [
+  { title: "Settings", href: "/settings", icon: Settings },
+];
 
 export function Sidebar({ className, onNavigate }: SidebarProps) {
   const pathname = usePathname();
@@ -32,7 +54,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       {/* Brand Logo Header */}
       <div className="h-16 px-6 flex items-center justify-between border-b border-white/[0.06]">
         <Link
-          href="/dashboard"
+          href="/"
           onClick={onNavigate}
           className="flex items-center gap-3 group"
         >
@@ -80,66 +102,111 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
       </div>
 
       {/* Main Navigation Links */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          Workspace Navigation
+      <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+        {/* Workspace Section */}
+        <div className="space-y-1">
+          <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Workspace
+          </div>
+
+          {WORKSPACE_NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive =
+              pathname === item.href ||
+              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                className={cn(
+                  "group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150",
+                  isActive
+                    ? "bg-gradient-to-r from-violet-600/20 to-transparent text-white border-l-2 border-violet-500 font-semibold shadow-inner shadow-violet-500/5"
+                    : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]"
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "w-4 h-4 transition-colors shrink-0",
+                    isActive
+                      ? "text-violet-400"
+                      : "text-slate-400 group-hover:text-slate-200"
+                  )}
+                />
+                <span className="flex-1 truncate">{item.title}</span>
+
+                {isActive && (
+                  <ChevronRight className="w-3.5 h-3.5 text-violet-400 opacity-60 shrink-0" />
+                )}
+              </Link>
+            );
+          })}
         </div>
 
-        {MAIN_NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
+        {/* System Section */}
+        <div className="space-y-1 pt-2 border-t border-white/[0.04]">
+          <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            System
+          </div>
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
-                isActive
-                  ? "bg-gradient-to-r from-violet-600/20 to-transparent text-white border-l-2 border-violet-500 font-semibold shadow-inner shadow-violet-500/5"
-                  : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]"
-              )}
-            >
-              <Icon
+          {SYSTEM_NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href || pathname.startsWith(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
                 className={cn(
-                  "w-4 h-4 transition-colors",
+                  "group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150",
                   isActive
-                    ? "text-violet-400"
-                    : "text-slate-400 group-hover:text-slate-200"
+                    ? "bg-gradient-to-r from-violet-600/20 to-transparent text-white border-l-2 border-violet-500 font-semibold shadow-inner shadow-violet-500/5"
+                    : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]"
                 )}
-              />
-              <span className="flex-1">{item.title}</span>
+              >
+                <Icon
+                  className={cn(
+                    "w-4 h-4 transition-colors shrink-0",
+                    isActive
+                      ? "text-violet-400"
+                      : "text-slate-400 group-hover:text-slate-200"
+                  )}
+                />
+                <span className="flex-1 truncate">{item.title}</span>
 
-              {item.badge && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-slate-300 font-medium">
-                  {item.badge}
-                </span>
-              )}
-
-              {isActive && (
-                <ChevronRight className="w-3.5 h-3.5 text-violet-400 opacity-60" />
-              )}
-            </Link>
-          );
-        })}
+                {isActive && (
+                  <ChevronRight className="w-3.5 h-3.5 text-violet-400 opacity-60 shrink-0" />
+                )}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
-      {/* Sidebar Footer info */}
-      <div className="p-4 border-t border-white/[0.06] bg-surface-canvas/40">
-        <div className="p-3 rounded-xl bg-surface-elevated/70 border border-white/5">
-          <div className="flex items-center gap-2 mb-1.5">
+      {/* Sidebar Footer */}
+      <div className="p-3 border-t border-white/[0.06] bg-surface-canvas/40 space-y-2">
+        <div className="p-2.5 rounded-xl bg-surface-elevated/70 border border-white/5 flex items-center justify-between text-[11px]">
+          <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="text-xs font-semibold text-slate-200">
-              Phase 1 Scaffold
-            </span>
+            <span className="font-semibold text-slate-200">ROXIE HUB v1.0</span>
           </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
-            Application shell, navigation, and module routes are active.
-          </p>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+            Verified
+          </span>
         </div>
+
+        <a
+          href="https://github.com/imceobitchuzb/rblxweb"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 py-1 text-[11px] text-slate-400 hover:text-white transition-colors"
+        >
+          <Github className="w-3.5 h-3.5" />
+          <span>GitHub Repository</span>
+        </a>
       </div>
     </aside>
   );

@@ -1,20 +1,25 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell,
   Search,
   Menu,
   Sparkles,
-  Youtube,
-  Radio,
-  ExternalLink,
+  Command,
+  Flame,
 } from "lucide-react";
 import { MAIN_NAV_ITEMS, DEFAULT_CREATOR } from "@/lib/constants";
-import { Input } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
+import { INITIAL_VIDEOS } from "@/lib/mock-videos";
+import { INITIAL_SCRIPTS } from "@/lib/mock-scripts";
+import { INITIAL_IDEAS } from "@/lib/mock-ideas";
+import { INITIAL_CALENDAR_EVENTS } from "@/lib/mock-calendar";
+import { deriveWorkspaceNotifications, NotificationItem } from "@/lib/notification-utils";
 import { Button } from "@/components/ui/Button";
+import { GlobalSearch } from "@/components/search/GlobalSearch";
+import { CommandPalette } from "@/components/command/CommandPalette";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
 interface TopNavProps {
   onOpenMobileMenu: () => void;
@@ -22,6 +27,42 @@ interface TopNavProps {
 
 export function TopNav({ onOpenMobileMenu }: TopNavProps) {
   const pathname = usePathname();
+
+  // Modals state
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
+  const [isCommandOpen, setIsCommandOpen] = React.useState(false);
+
+  // Notifications state
+  const [notifications, setNotifications] = React.useState<NotificationItem[]>(() =>
+    deriveWorkspaceNotifications(
+      INITIAL_VIDEOS,
+      INITIAL_SCRIPTS,
+      INITIAL_IDEAS,
+      INITIAL_CALENDAR_EVENTS
+    )
+  );
+
+  // Global keyboard shortcut: Ctrl+K / Cmd+K
+  React.useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCommandOpen((prev) => !prev);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const handleMarkAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
+  };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
 
   // Find active navigation item metadata
   const currentNav = MAIN_NAV_ITEMS.find(
@@ -34,96 +75,124 @@ export function TopNav({ onOpenMobileMenu }: TopNavProps) {
   };
 
   return (
-    <header className="h-16 w-full bg-surface-panel/80 backdrop-blur-xl border-b border-white/[0.06] px-4 md:px-6 flex items-center justify-between gap-4 z-20 sticky top-0">
-      {/* Left: Mobile hamburger & route heading */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onOpenMobileMenu}
-          className="lg:hidden text-slate-300 hover:text-white"
-          aria-label="Open navigation menu"
-        >
-          <Menu className="w-5 h-5" />
-        </Button>
-
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-base md:text-lg font-bold text-white tracking-tight leading-none">
-              {currentNav.title}
-            </h1>
-            <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-          </div>
-          <p className="text-[11px] text-slate-400 hidden sm:block truncate max-w-xs md:max-w-md">
-            {currentNav.description}
-          </p>
-        </div>
-      </div>
-
-      {/* Center: Search input */}
-      <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
-        <div className="relative w-full">
-          <Input
-            placeholder="Search ideas, videos, scripts, characters... (Ctrl + K)"
-            icon={<Search className="w-4 h-4" />}
-            className="h-9 text-xs bg-surface-canvas/90"
-            disabled
-          />
-          <kbd className="absolute right-2.5 top-2 pointer-events-none text-[10px] font-mono text-slate-400 bg-surface-elevated px-1.5 py-0.5 rounded border border-white/10">
-            Ctrl K
-          </kbd>
-        </div>
-      </div>
-
-      {/* Right: Actions, platform indicators, notifications & profile */}
-      <div className="flex items-center gap-3">
-        {/* Connected Platform status */}
-        <div className="hidden lg:flex items-center gap-2">
-          <Badge variant="crimson" size="sm" className="gap-1 cursor-default">
-            <Youtube className="w-3 h-3 text-red-400" />
-            <span>YT Linked</span>
-          </Badge>
-
-          <Badge variant="neon" size="sm" className="gap-1 cursor-default">
-            <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
-            <span>Roblox Sync</span>
-          </Badge>
-        </div>
-
-        {/* Notifications */}
-        <div className="relative">
+    <>
+      <header className="h-16 w-full bg-surface-panel/80 backdrop-blur-xl border-b border-white/[0.06] px-4 md:px-6 flex items-center justify-between gap-4 z-20 sticky top-0">
+        {/* Left: Mobile hamburger & route heading */}
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
-            className="w-9 h-9 text-slate-300 hover:text-white relative"
-            aria-label="Notifications"
+            onClick={onOpenMobileMenu}
+            className="lg:hidden text-slate-300 hover:text-white"
+            aria-label="Open navigation menu"
           >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cyan-400 ring-2 ring-surface-panel" />
+            <Menu className="w-5 h-5" />
           </Button>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base md:text-lg font-bold text-white tracking-tight leading-none">
+                {currentNav.title}
+              </h1>
+              <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            </div>
+            <p className="text-[11px] text-slate-400 hidden sm:block truncate max-w-xs md:max-w-md">
+              {currentNav.description}
+            </p>
+          </div>
         </div>
 
-        {/* Creator Profile Chip */}
-        <div className="flex items-center gap-2.5 pl-2 border-l border-white/[0.08]">
-          <div className="w-9 h-9 rounded-xl overflow-hidden ring-1 ring-white/10 bg-surface-elevated shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={DEFAULT_CREATOR.avatarUrl}
-              alt={DEFAULT_CREATOR.name}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="hidden sm:block text-left">
-            <div className="text-xs font-semibold text-white leading-tight flex items-center gap-1">
-              {DEFAULT_CREATOR.name}
-              <Sparkles className="w-3 h-3 text-amber-400" />
-            </div>
-            <div className="text-[10px] text-slate-400 font-mono">
-              {DEFAULT_CREATOR.handle}
-            </div>
-          </div>
+        {/* Center: Search trigger input */}
+        <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
+          <button
+            type="button"
+            onClick={() => setIsSearchOpen(true)}
+            className="w-full h-9 rounded-xl bg-surface-canvas/90 hover:bg-surface-canvas text-xs text-slate-400 hover:text-slate-200 border border-white/10 px-3.5 flex items-center justify-between transition-all group shadow-sm focus:outline-none focus:border-cyan-500"
+          >
+            <span className="flex items-center gap-2">
+              <Search className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
+              <span>Search ideas, scripts, characters, videos...</span>
+            </span>
+            <kbd className="text-[10px] font-mono text-slate-400 bg-surface-elevated px-1.5 py-0.5 rounded border border-white/10 flex items-center gap-0.5">
+              <span>⌘</span>K
+            </kbd>
+          </button>
         </div>
-      </div>
-    </header>
+
+        {/* Right: Actions, platform indicators, notifications & profile */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Mobile search icon */}
+          <button
+            type="button"
+            onClick={() => setIsSearchOpen(true)}
+            className="md:hidden w-8 h-8 rounded-xl bg-surface-panel/80 hover:bg-white/10 border border-white/5 flex items-center justify-center text-slate-300 hover:text-white"
+            aria-label="Search studio"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+
+          {/* Command Palette Trigger */}
+          <button
+            type="button"
+            onClick={() => setIsCommandOpen(true)}
+            className="w-8 h-8 rounded-xl bg-surface-panel/80 hover:bg-white/10 border border-white/5 flex items-center justify-center text-slate-300 hover:text-white transition-all focus:outline-none"
+            title="Command Palette (Ctrl + K)"
+            aria-label="Open command palette"
+          >
+            <Command className="w-4 h-4 text-violet-400" />
+          </button>
+
+          {/* Consistency Streak Tag */}
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 font-mono">
+            <Flame className="w-3.5 h-3.5 fill-amber-500 text-amber-500 animate-pulse" />
+            <span className="font-bold">{DEFAULT_CREATOR.streakDays}d Streak</span>
+          </div>
+
+          {/* Notification Center */}
+          <NotificationCenter
+            notifications={notifications}
+            onMarkAsRead={handleMarkAsRead}
+            onMarkAllAsRead={handleMarkAllAsRead}
+          />
+
+          {/* Creator Profile Link */}
+          <Link
+            href="/settings"
+            className="flex items-center gap-2.5 pl-2 border-l border-white/[0.08] hover:opacity-80 transition-opacity"
+            title="Account & Settings"
+          >
+            <div className="w-8 h-8 rounded-xl overflow-hidden ring-1 ring-white/10 bg-surface-elevated shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={DEFAULT_CREATOR.avatarUrl}
+                alt={DEFAULT_CREATOR.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="hidden sm:block text-left">
+              <div className="text-xs font-semibold text-white leading-tight flex items-center gap-1">
+                {DEFAULT_CREATOR.name}
+                <Sparkles className="w-3 h-3 text-amber-400" />
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">
+                {DEFAULT_CREATOR.handle}
+              </div>
+            </div>
+          </Link>
+        </div>
+      </header>
+
+      {/* Global Search Dialog */}
+      <GlobalSearch
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
+
+      {/* Keyboard Command Palette */}
+      <CommandPalette
+        isOpen={isCommandOpen}
+        onClose={() => setIsCommandOpen(false)}
+      />
+    </>
   );
 }
