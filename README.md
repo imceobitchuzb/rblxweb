@@ -172,8 +172,20 @@ npm run build
   - **Upcoming Drops Panel**: Chronological upcoming release watchlist with date and time breakdowns
   - **Dashboard Command Center (`/dashboard`)**: Interactive creator pipeline stage overview (`IDEAS → SCRIPTS → VIDEOS → SCHEDULED → PUBLISHED`), upcoming drops schedule, top published release showcases, and consistency streak tracker
   - **42 Unit Tests Passing**: Full verification of video integrity, calendar math, filtering, scheduling, and cross-module ID preservation
-- [ ] **Phase 5: Analytics Dashboard & Creator Profile**
-  - Key performance indicators, interactive charts, engagement breakdowns
+- [x] **Phase 5: Analytics & Creator Intelligence**
+  - **Analytics Engine (`/analytics`)**: Full-featured creator intelligence suite with pure mathematical derivation layer (`lib/analytics-utils.ts`)
+  - **Unified Filtering Layer**: Combined Time Range (`7D`, `30D`, `90D`, `ALL`) and Platform filters (`YouTube Shorts`, `YouTube`, `TikTok`, `Instagram Reels`) updating all components reactively
+  - **KPI Dashboard Cards**: Total Views, Average Views per video, Average Engagement Rate %, and Published Video counts with secondary contextual metrics
+  - **Views Over Time Chart**: Responsive SVG-based curve with area gradients, axis labels, interactive hover tooltips, and empty-state support
+  - **Engagement Rate Trend Chart**: Time-series curve tracking `((likes + comments) / views) * 100` with horizontal average benchmark line
+  - **Multi-Channel Platform Breakdown**: Factual, side-by-side performance cards (videos, views, avg views, likes, comments, engagement rate) across all 4 platforms
+  - **Publishing Pipeline Cadence**: Factual timeline tracking published uploads, scheduled drops, and in-production assets
+  - **Top Content Leaderboard**: Expandable table of published videos sorted by views with direct linkage to Video Details dossiers
+  - **Content Segments Analysis**: Performance breakdowns across Roblox categories (from linked Ideas), formats (Short vs Long Video), and runtime brackets
+  - **Character Cast Performance**: Aggregate appearances, total views, average views, and engagement rates for characters in published videos
+  - **Creator Intelligence Insights**: Evidence-based, non-speculative observations derived directly from dataset math
+  - **Compact Dashboard Summary**: High-level KPI strip on `/dashboard` with one-click navigation to `/analytics`
+  - **58 Unit Tests Passing**: Comprehensive verification of metrics math, zero-view safety, multi-filter combinations, time-series aggregation, and formatters
 - [ ] **Phase 6: Persistence & External Integrations**
   - PostgreSQL live connection via Prisma (seamlessly swapping local mock state with server actions / API routes without UI rewrites)
   - YouTube Data API v3 and TikTok Creator API sync
