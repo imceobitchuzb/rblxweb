@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - Phase 8: Creator Workspaces, Team Collaboration & Audit Logging
+
+### Added
+- **Creator Workspace Switcher & Context Re-signing**:
+  - `components/layout/TopNav.tsx`: Dropdown workspace selector with active checkmark, role indicator, and instantaneous workspace switching.
+  - `lib/server/workspaces.ts`: Multi-tenant workspace switching (`switchActiveWorkspace`). Strictly validates user membership in the requested workspace, issues a newly signed JWT session, and refreshes the HTTP-only `roxie_session` cookie.
+  - Workspace details mutation (`updateWorkspaceDetails`) restricted to `OWNER` with unique slug generation and validation.
+- **Role Hierarchy & Escalation Defense**:
+  - `OWNER`, `ADMIN`, and `MEMBER` RBAC hierarchy enforcement.
+  - Role escalation prevention: `ADMIN` members cannot promote themselves or anyone else to `OWNER`, nor invite with `OWNER` role.
+  - Single-owner protection: Workspace `OWNER` cannot be demoted or removed unless workspace ownership is transferred.
+  - Member departure (`leaveWorkspace`) safely allowing voluntary exit while blocking the sole owner from stranding a workspace.
+- **Cryptographic Workspace Invitation System**:
+  - Prisma model `WorkspaceInvitation` with indexed `tokenHash` (SHA-256) and `status` (`PENDING`, `ACCEPTED`, `EXPIRED`, `REVOKED`).
+  - Cryptographically secure 64-character hex tokens generated via `crypto.randomBytes(32)`. Raw token is presented once to the inviter and never persisted in database or store.
+  - 7-day automatic expiration enforcement with revocation controls.
+  - Defensive validation blocking duplicate pending invitations and preventing inviting existing active workspace members.
+- **Sanitized Workspace Audit Logging**:
+  - Prisma model `AuditLog` capturing action name, entity type, entity ID, and actor ID.
+  - `lib/server/audit.ts`: Automated audit recording for workspace updates, member invites, role transitions, removals, leaves, and registrations.
+  - Strict metadata sanitizer `sanitizeAuditMetadata()` scrubbing passwords, tokens, hashes, cookies, secrets, and JWTs, and truncating strings > 256 characters.
+- **User Profile Management**:
+  - User model extended with `bio` (up to 500 characters) and `timezone` (defaulting to UTC).
+  - `lib/server/profile.ts`: Validates name length (<= 60 chars), bio length (<= 500 chars), avatar URL protocols (`http:`, `https:`), and verifies/normalizes IANA timezones.
+- **Workspace-Scoped Dashboard & Multi-Entity Search**:
+  - `lib/server/dashboard.ts`: Workspace-scoped metric derivation with zero database fabrication. Returns clean empty states when a workspace has no records.
+  - `lib/server/search.ts`: Server-side search executing across ideas, characters, scripts, and videos strictly within the active workspace.
+- **UI Enhancements in Settings & Command Palette**:
+  - `app/settings/page.tsx`: Full Workspace & Team tab with team member roster, role management, member removal, invitation generator with copy link button, pending invitations table, and live workspace audit log stream.
+  - Profile tab hooked into persistent profile updates with immediate feedback.
+  - `components/command/CommandPalette.tsx`: Added direct command palette shortcut to Workspace & Team settings.
+- **Automated Verification Suite Expansion**:
+  - `tests/workspaces.test.ts`: 17 comprehensive unit tests for workspace operations, role hierarchy, membership departure, switching, and profile validation.
+  - `tests/invitations-audit.test.ts`: 17 comprehensive unit tests for token hashing, invitation lifecycle, duplicate prevention, metadata sanitization, empty workspace dashboard states, and search isolation.
+  - Total test suite expanded from 94 to 128 tests passing (100% pass rate).
+
+---
+
 ## [1.1.0] - Phase 7: Authentication & Multi-User Workspace Architecture
 
 ### Added

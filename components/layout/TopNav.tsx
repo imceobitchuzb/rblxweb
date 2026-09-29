@@ -12,14 +12,17 @@ import {
   LogOut,
   Building2,
   ChevronDown,
+  Check,
 } from "lucide-react";
 import { MAIN_NAV_ITEMS, DEFAULT_CREATOR } from "@/lib/constants";
+import { WorkspaceSummary } from "@/lib/types";
 import { INITIAL_VIDEOS } from "@/lib/mock-videos";
 import { INITIAL_SCRIPTS } from "@/lib/mock-scripts";
 import { INITIAL_IDEAS } from "@/lib/mock-ideas";
 import { INITIAL_CALENDAR_EVENTS } from "@/lib/mock-calendar";
 import { deriveWorkspaceNotifications, NotificationItem } from "@/lib/notification-utils";
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { CommandPalette } from "@/components/command/CommandPalette";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
@@ -29,6 +32,7 @@ import { fetchScriptsAction } from "@/app/actions/scripts";
 import { fetchIdeasAction } from "@/app/actions/ideas";
 import { fetchCalendarEventsAction } from "@/app/actions/calendar";
 import { getAuthSessionAction, logoutAction, AuthSessionResponse } from "@/app/actions/auth";
+import { fetchUserWorkspacesAction, switchWorkspaceAction } from "@/app/actions/workspace";
 
 interface TopNavProps {
   onOpenMobileMenu: () => void;
@@ -42,11 +46,18 @@ export function TopNav({ onOpenMobileMenu }: TopNavProps) {
   const [isCommandOpen, setIsCommandOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const [session, setSession] = React.useState<AuthSessionResponse | null>(null);
+  const [userWorkspaces, setUserWorkspaces] = React.useState<WorkspaceSummary[]>([]);
+  const [isSwitchingWorkspace, setIsSwitchingWorkspace] = React.useState(false);
 
   React.useEffect(() => {
     getAuthSessionAction().then((res) => {
       if (res.success && res.data) {
         setSession(res.data);
+      }
+    });
+    fetchUserWorkspacesAction().then((res) => {
+      if (res.success && res.data) {
+        setUserWorkspaces(res.data);
       }
     });
   }, [pathname]);
@@ -256,10 +267,68 @@ export function TopNav({ onOpenMobileMenu }: TopNavProps) {
                     </div>
                   </div>
 
+                  {/* Workspace Switcher */}
+                  <div className="py-2 border-b border-surface-800">
+                    <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-surface-400">
+                      Workspaces
+                    </div>
+                    {userWorkspaces.length > 0 ? (
+                      <div className="space-y-1">
+                        {userWorkspaces.map((ws) => {
+                          const isActive = ws.id === session?.workspace.id || ws.isCurrent;
+                          return (
+                            <button
+                              key={ws.id}
+                              disabled={isSwitchingWorkspace || isActive}
+                              onClick={async () => {
+                                setIsSwitchingWorkspace(true);
+                                const res = await switchWorkspaceAction(ws.id);
+                                if (res.success) {
+                                  window.location.reload();
+                                } else {
+                                  setIsSwitchingWorkspace(false);
+                                }
+                              }}
+                              className={cn(
+                                "w-full flex items-center justify-between px-3 py-1.5 text-xs rounded-xl transition-all text-left",
+                                isActive
+                                  ? "bg-cyan-500/10 text-cyan-400 font-medium"
+                                  : "text-surface-300 hover:text-surface-100 hover:bg-surface-800/60"
+                              )}
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <Building2 className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                                <span className="truncate">{ws.name}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-white/5 font-mono text-slate-400">
+                                  {ws.role}
+                                </span>
+                                {isActive && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="px-3 py-1 text-xs text-slate-400">
+                        {session?.workspace.name || "Default Workspace"}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Actions */}
                   <div className="py-1">
                     <Link
-                      href="/settings"
+                      href="/settings?tab=workspace"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-xs text-surface-300 hover:text-surface-100 hover:bg-surface-800/60 rounded-xl transition-colors"
+                    >
+                      <Building2 className="w-3.5 h-3.5 text-surface-400" />
+                      <span>Workspace & Team</span>
+                    </Link>
+                    <Link
+                      href="/settings?tab=profile"
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center gap-2 px-3 py-2 text-xs text-surface-300 hover:text-surface-100 hover:bg-surface-800/60 rounded-xl transition-colors"
                     >

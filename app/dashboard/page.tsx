@@ -50,8 +50,13 @@ import { fetchVideosAction } from "@/app/actions/videos";
 import { fetchCalendarEventsAction } from "@/app/actions/calendar";
 import { fetchScriptsAction } from "@/app/actions/scripts";
 import { fetchIdeasAction } from "@/app/actions/ideas";
+import { fetchWorkspaceDashboardAction } from "@/app/actions/dashboard";
+import { getAuthSessionAction, AuthSessionResponse } from "@/app/actions/auth";
+import { WorkspaceDashboardData } from "@/lib/types";
 
 export default function DashboardPage() {
+  const [dashboardData, setDashboardData] = React.useState<WorkspaceDashboardData | null>(null);
+  const [authSession, setAuthSession] = React.useState<AuthSessionResponse | null>(null);
   const [videos, setVideos] = React.useState(INITIAL_VIDEOS);
   const [events, setEvents] = React.useState(INITIAL_CALENDAR_EVENTS);
   const [scripts, setScripts] = React.useState(INITIAL_SCRIPTS);
@@ -61,17 +66,30 @@ export default function DashboardPage() {
   React.useEffect(() => {
     let mounted = true;
     async function load() {
-      const [vidRes, calRes, scriptRes, ideaRes] = await Promise.all([
+      const [dashRes, sessionRes, vidRes, calRes, scriptRes, ideaRes] = await Promise.all([
+        fetchWorkspaceDashboardAction(),
+        getAuthSessionAction(),
         fetchVideosAction(),
         fetchCalendarEventsAction(),
         fetchScriptsAction(),
         fetchIdeasAction(),
       ]);
       if (mounted) {
-        if (vidRes.success) setVideos(vidRes.data);
-        if (calRes.success) setEvents(calRes.data);
-        if (scriptRes.success) setScripts(scriptRes.data);
-        if (ideaRes.success) setIdeas(ideaRes.data);
+        if (dashRes.success) {
+          setDashboardData(dashRes.data);
+          setIdeas(dashRes.data.recentIdeas);
+          setScripts(dashRes.data.recentScripts);
+          setVideos(dashRes.data.recentVideos);
+          setEvents(dashRes.data.upcomingEvents);
+        } else {
+          if (vidRes.success) setVideos(vidRes.data);
+          if (calRes.success) setEvents(calRes.data);
+          if (scriptRes.success) setScripts(scriptRes.data);
+          if (ideaRes.success) setIdeas(ideaRes.data);
+        }
+        if (sessionRes.success && sessionRes.data) {
+          setAuthSession(sessionRes.data);
+        }
       }
     }
     load();
@@ -115,16 +133,25 @@ export default function DashboardPage() {
               <Badge variant="purple" size="sm">
                 ROXIE HUB • Creator OS
               </Badge>
-              <span className="text-xs text-slate-400 font-mono">Phase 4 Active</span>
+              <span className="text-xs text-slate-400 font-mono">
+                {dashboardData?.workspace.name || authSession?.workspace.name || "Workspace"}
+              </span>
+              <Badge variant="neon" size="sm">
+                ROLE: {dashboardData?.role || authSession?.role || "OWNER"}
+              </Badge>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Welcome back,{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-300">
-                {DEFAULT_CREATOR.name}
+                {authSession?.user.name || DEFAULT_CREATOR.name}
               </span>
             </h2>
             <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
-              Your Roblox content engine is running: 10 video assets in catalog, 5 screenplays in studio, and 14-day upload consistency.
+              Your Roblox content engine for{" "}
+              <span className="font-semibold text-white">
+                {dashboardData?.workspace.name || authSession?.workspace.name || "your studio"}
+              </span>
+              : {videos.length} videos tracked, {scripts.length} screenplays, and {ideas.length} concepts in pipeline.
             </p>
           </div>
 
@@ -321,48 +348,60 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {upcomingContent.map((item) => {
-              const platformCfg =
-                PLATFORM_CONFIG[item.platform] || PLATFORM_CONFIG.YOUTUBE;
+            {upcomingContent.length > 0 ? (
+              upcomingContent.map((item) => {
+                const platformCfg =
+                  PLATFORM_CONFIG[item.platform] || PLATFORM_CONFIG.YOUTUBE;
 
-              return (
-                <div
-                  key={item.id}
-                  className="p-3.5 rounded-2xl glass-panel bg-surface-panel/90 border border-white/5 flex items-center justify-between gap-3 hover:border-violet-500/30 transition-all"
-                >
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase",
-                          platformCfg.badge
-                        )}
-                      >
-                        {platformCfg.label}
-                      </span>
-                      <span className="text-[11px] font-mono text-slate-400">
-                        {formatDate(item.scheduledAt, { month: "short", day: "numeric" })},{" "}
-                        {formatTime(item.scheduledAt)}
-                      </span>
+                return (
+                  <div
+                    key={item.id}
+                    className="p-3.5 rounded-2xl glass-panel bg-surface-panel/90 border border-white/5 flex items-center justify-between gap-3 hover:border-violet-500/30 transition-all"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase",
+                            platformCfg.badge
+                          )}
+                        >
+                          {platformCfg.label}
+                        </span>
+                        <span className="text-[11px] font-mono text-slate-400">
+                          {formatDate(item.scheduledAt, { month: "short", day: "numeric" })},{" "}
+                          {formatTime(item.scheduledAt)}
+                        </span>
+                      </div>
+
+                      <h5 className="text-xs font-bold text-white truncate">
+                        {item.title}
+                      </h5>
+
+                      {item.notes && (
+                        <p className="text-[10px] text-slate-400 truncate">{item.notes}</p>
+                      )}
                     </div>
 
-                    <h5 className="text-xs font-bold text-white truncate">
-                      {item.title}
-                    </h5>
-
-                    {item.notes && (
-                      <p className="text-[10px] text-slate-400 truncate">{item.notes}</p>
-                    )}
+                    <Link href={`/calendar`}>
+                      <Button variant="outline" size="sm" className="h-7 text-xs px-2.5 shrink-0">
+                        View
+                      </Button>
+                    </Link>
                   </div>
-
-                  <Link href={`/calendar`}>
-                    <Button variant="outline" size="sm" className="h-7 text-xs px-2.5 shrink-0">
-                      View
-                    </Button>
-                  </Link>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div className="p-6 rounded-2xl glass-panel bg-surface-panel/60 border border-white/5 text-center space-y-2">
+                <Calendar className="w-6 h-6 text-slate-500 mx-auto" />
+                <p className="text-xs text-slate-400">No scheduled content drops yet.</p>
+                <Link href="/calendar">
+                  <Button variant="outline" size="sm" className="text-xs h-7">
+                    Plan an Upload
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </div>
 
@@ -385,68 +424,80 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {publishedVideos.slice(0, 2).map((vid) => {
-              const platformCfg =
-                PLATFORM_CONFIG[vid.platform] || PLATFORM_CONFIG.YOUTUBE;
+            {publishedVideos.length > 0 ? (
+              publishedVideos.slice(0, 2).map((vid) => {
+                const platformCfg =
+                  PLATFORM_CONFIG[vid.platform] || PLATFORM_CONFIG.YOUTUBE;
 
-              return (
-                <div
-                  key={vid.id}
-                  className="p-3.5 rounded-2xl glass-panel bg-surface-panel/90 border border-white/5 flex flex-col sm:flex-row items-start sm:items-center gap-3.5 hover:border-violet-500/30 transition-all"
-                >
-                  <div className="relative w-full sm:w-28 aspect-video rounded-xl overflow-hidden bg-black shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={vid.thumbnail}
-                      alt={vid.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <span className="absolute bottom-1 right-1 text-[9px] font-mono px-1 rounded bg-black/80 text-white">
-                      {formatDuration(vid.duration)}
-                    </span>
-                  </div>
-
-                  <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase",
-                          platformCfg.badge
-                        )}
-                      >
-                        {platformCfg.label}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        {formatDate(vid.publishedAt || vid.createdAt)}
+                return (
+                  <div
+                    key={vid.id}
+                    className="p-3.5 rounded-2xl glass-panel bg-surface-panel/90 border border-white/5 flex flex-col sm:flex-row items-start sm:items-center gap-3.5 hover:border-violet-500/30 transition-all"
+                  >
+                    <div className="relative w-full sm:w-28 aspect-video rounded-xl overflow-hidden bg-black shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={vid.thumbnail}
+                        alt={vid.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute bottom-1 right-1 text-[9px] font-mono px-1 rounded bg-black/80 text-white">
+                        {formatDuration(vid.duration)}
                       </span>
                     </div>
 
-                    <h5 className="text-xs font-bold text-white truncate">{vid.title}</h5>
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase",
+                            platformCfg.badge
+                          )}
+                        >
+                          {platformCfg.label}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {formatDate(vid.publishedAt || vid.createdAt)}
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-3 text-xs text-slate-300 font-mono">
-                      <span className="flex items-center gap-1">
-                        <Eye className="w-3 h-3 text-cyan-400" />
-                        {formatMetric(vid.views)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Heart className="w-3 h-3 text-rose-400" />
-                        {formatMetric(vid.likes)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle className="w-3 h-3 text-violet-400" />
-                        {formatMetric(vid.comments)}
-                      </span>
+                      <h5 className="text-xs font-bold text-white truncate">{vid.title}</h5>
+
+                      <div className="flex items-center gap-3 text-xs text-slate-300 font-mono">
+                        <span className="flex items-center gap-1">
+                          <Eye className="w-3 h-3 text-cyan-400" />
+                          {formatMetric(vid.views)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3 h-3 text-rose-400" />
+                          {formatMetric(vid.likes)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageCircle className="w-3 h-3 text-violet-400" />
+                          {formatMetric(vid.comments)}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <Link href={`/videos?videoId=${vid.id}`}>
-                    <Button variant="outline" size="sm" className="h-7 text-xs px-2.5 shrink-0">
-                      Inspect
-                    </Button>
-                  </Link>
-                </div>
-              );
-            })}
+                    <Link href={`/videos?videoId=${vid.id}`}>
+                      <Button variant="outline" size="sm" className="h-7 text-xs px-2.5 shrink-0">
+                        Inspect
+                      </Button>
+                    </Link>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="p-6 rounded-2xl glass-panel bg-surface-panel/60 border border-white/5 text-center space-y-2">
+                <Film className="w-6 h-6 text-slate-500 mx-auto" />
+                <p className="text-xs text-slate-400">No published videos in this workspace yet.</p>
+                <Link href="/videos">
+                  <Button variant="outline" size="sm" className="text-xs h-7">
+                    Produce a Video
+                  </Button>
+                </Link>
+              </div>
+            )}
 
             {/* Quick aggregate performance strip */}
             <div className="p-3.5 rounded-2xl bg-surface-canvas/60 border border-white/5 flex items-center justify-between text-xs">

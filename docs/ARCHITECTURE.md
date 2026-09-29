@@ -145,30 +145,43 @@ ROXIE HUB executes an end-to-end continuous loop for Roblox creators:
 | `VideoCharacter` | `(videoId, characterId)` | `videoId` -> `Video.id` (Cascade), `characterId` -> `Character.id` (Restrict) | Links video cast |
 | `CalendarEvent` | `id` (cuid) | `workspaceId` -> `Workspace.id`, `userId` -> `User.id`, `videoId` -> `Video.id` (SetNull) | Preserves calendar slot if video removed |
 | `UserSettings` | `id` (cuid) | `userId` -> `User.id` (Unique, Cascade) | 1:1 with User |
+| `WorkspaceInvitation` | `id` (cuid) | `workspaceId` -> `Workspace.id` (Cascade), `inviterId` -> `User.id` (Cascade) | Indexed `tokenHash` (SHA-256), status, expiresAt |
+| `AuditLog` | `id` (cuid) | `workspaceId` -> `Workspace.id` (Cascade), `userId` -> `User.id` (SetNull) | Action audit trails with sanitized JSON metadata |
 
 ---
 
-## 4. Multi-Tenant Authorization & Security Principles
+## 4. Multi-Tenant Authorization, Workspaces & Security Principles
 
 1. **Zero Client Trust**:
    - Clients never provide `userId` or `workspaceId` in server action payloads.
    - The active user identity and workspace context are resolved strictly server-side from the signed HTTP-only session cookie (`roxie_session`).
-2. **Role Hierarchy**:
-   - `OWNER` (level 3): Can delete workspace, configure team settings, invite/remove members, and perform full CRUD.
-   - `ADMIN` (level 2): Can invite/manage members and perform full CRUD.
-   - `MEMBER` (level 1): Can create, edit, and organize workspace content.
-3. **Cross-Tenant Isolation Defense**:
+2. **Role Hierarchy & Escalation Defense**:
+   - `OWNER` (level 3): Can delete/update workspace, configure team settings, invite/remove members, promote/demote roles, and perform full CRUD.
+   - `ADMIN` (level 2): Can invite members up to `ADMIN` role (cannot grant `OWNER` or invite with `OWNER`), manage lower-tier members, and perform full CRUD.
+   - `MEMBER` (level 1): Can create, edit, and organize workspace content. Cannot invite or modify team membership.
+3. **Workspace Switching**:
+   - Switching active workspace strictly verifies active `WorkspaceMember` status for the requesting user.
+   - Issues a newly signed JWT embedding `{ userId, email, name, workspaceId: targetWsId, role: verifiedRole }` and refreshes the HTTP-only `roxie_session` cookie.
+4. **Cryptographic Invitation Subsystem**:
+   - Generates cryptographically secure 64-character hex tokens (`crypto.randomBytes(32)`).
+   - Only the SHA-256 hash (`tokenHash`) is persisted in the database; raw tokens are never saved.
+   - Enforces 7-day expiration, single-use acceptance, revocation controls, and duplicate member/invite defenses.
+5. **Sanitized Workspace Audit Logging**:
+   - Every administrative action (`WORKSPACE_UPDATED`, `MEMBER_INVITED`, `MEMBER_ROLE_CHANGED`, `MEMBER_REMOVED`, `INVITATION_REVOKED`, `USER_REGISTERED`, `PROFILE_UPDATED`) generates an immutable `AuditLog`.
+   - `sanitizeAuditMetadata()` scrubs all sensitive keys (`token`, `password`, `secret`, `cookie`, `hash`, `authorization`, `jwt`) and truncates oversized strings (> 256 chars).
+6. **Cross-Tenant Isolation Defense**:
    - Every database query strictly filters by `workspaceId: activeWorkspaceId`.
    - Any attempt by User B to view, update, or delete records in Workspace A returns `null` or raises an authorization rejection.
-4. **Offline Development Fallback vs. Production Persistence Guard**:
+   - Server-side search (`searchWorkspaceEntities`) and dashboard calculations execute strictly within the bounds of the active workspace.
+7. **Offline Development Fallback vs. Production Persistence Guard**:
    - For offline test runners and local development, the in-memory store (`lib/server/store.ts`) mirrors the identical multi-tenant isolation model.
    - **Production Hardening (`assertPersistentDatabase`)**: In `NODE_ENV === "production"`, silent fallback to the ephemeral in-memory store is strictly prohibited. If database connectivity is disrupted or unavailable during any operation, an explicit `[Production Persistence Failure]` server exception is raised to prevent silent data loss or unpersisted state breaches.
-5. **Session Secret & Cryptographic Security**:
+8. **Session Secret & Cryptographic Security**:
    - In production, `SESSION_SECRET` is strictly enforced to be at least 32 characters. Missing or weak secrets trigger immediate critical runtime halts (`[SECURITY CRITICAL]`).
-6. **Open Redirect Defense**:
+9. **Open Redirect Defense**:
    - `getSafeCallbackUrl` inspects incoming `callbackUrl` query parameters, disallowing protocol-relative URLs (`//evil.com`), backslash escapes (`/\evil.com`), and javascript URI schemes, safely falling back to `/dashboard`.
-7. **Demo Credential Gating**:
-   - Demo credentials and quick-login helpers are automatically disabled in production mode unless explicitly opted into via `NEXT_PUBLIC_ENABLE_DEMO_LOGIN="true"`.
+10. **Demo Credential Gating**:
+    - Demo credentials and quick-login helpers are automatically disabled in production mode unless explicitly opted into via `NEXT_PUBLIC_ENABLE_DEMO_LOGIN="true"`.
 
 ---
 
@@ -179,6 +192,12 @@ All database mutations and queries are exposed to client components strictly thr
 | Domain | Action File | Actions Implemented |
 |---|---|---|
 | **Auth** | `app/actions/auth.ts` | `registerAction`, `loginAction`, `logoutAction`, `getAuthSessionAction` |
+| **Workspace** | `app/actions/workspace.ts` | `fetchUserWorkspacesAction`, `fetchWorkspaceMembersAction`, `updateWorkspaceAction`, `updateMemberRoleAction`, `removeMemberAction`, `leaveWorkspaceAction`, `switchWorkspaceAction` |
+| **Invitations** | `app/actions/invitations.ts` | `createInvitationAction`, `fetchWorkspaceInvitationsAction`, `revokeInvitationAction`, `acceptInvitationAction` |
+| **Profile** | `app/actions/profile.ts` | `fetchUserProfileAction`, `updateUserProfileAction` |
+| **Dashboard** | `app/actions/dashboard.ts` | `fetchWorkspaceDashboardAction` |
+| **Search** | `app/actions/search.ts` | `searchWorkspaceAction` |
+| **Audit** | `app/actions/audit.ts` | `fetchWorkspaceAuditLogsAction` |
 | **Ideas** | `app/actions/ideas.ts` | `fetchIdeasAction`, `createIdeaAction`, `updateIdeaAction`, `deleteIdeaAction`, `advanceIdeaStatusAction` |
 | **Characters** | `app/actions/characters.ts` | `fetchCharactersAction`, `createCharacterAction`, `updateCharacterAction`, `deleteCharacterAction` |
 | **Scripts** | `app/actions/scripts.ts` | `fetchScriptsAction`, `createScriptAction`, `updateScriptAction`, `deleteScriptAction`, `createSceneAction`, `updateSceneAction`, `deleteSceneAction`, `reorderScenesAction`, `createDialogueLineAction`, `updateDialogueLineAction`, `deleteDialogueLineAction` |
@@ -205,7 +224,9 @@ All state calculation, transformation, filtering, authorization, and data access
 | Database & Persistence | `lib/server/...`, `lib/prisma.ts` | `tests/database.test.ts` | 11 tests |
 | Authentication System | `lib/auth/password.ts`, `lib/auth/session.ts` | `tests/auth.test.ts` | 12 tests |
 | Multi-Tenant Authorization | `lib/auth/permissions.ts`, `lib/auth/context.ts` | `tests/authorization.test.ts` | 5 tests |
-| **Total Passing Tests** | | | **94 tests** |
+| Workspace Memberships & Profiles | `lib/server/workspaces.ts`, `lib/server/profile.ts` | `tests/workspaces.test.ts` | 17 tests |
+| Cryptographic Invitations & Audit | `lib/server/invitations.ts`, `lib/server/audit.ts` | `tests/invitations-audit.test.ts` | 17 tests |
+| **Total Passing Tests** | | | **128 tests** |
 
 ---
 

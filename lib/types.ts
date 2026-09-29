@@ -311,6 +311,8 @@ export interface AuthUser {
   name: string;
   creatorTag?: string;
   avatarUrl?: string;
+  bio?: string;
+  timezone?: string;
   createdAt?: string;
 }
 
@@ -327,5 +329,103 @@ export interface AuthContext {
   user: AuthUser;
   workspace: Workspace;
   role: WorkspaceRole;
+}
+
+// ==========================================
+// Phase 8: Workspace, Invitations & Audit Types
+// ==========================================
+
+export type InvitationStatus = "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
+
+export interface WorkspaceInvitation {
+  id: string;
+  workspaceId: string;
+  email: string;
+  role: WorkspaceRole;
+  tokenHash: string;
+  status: InvitationStatus;
+  invitedById: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AuditAction =
+  | "MEMBER_INVITED"
+  | "MEMBER_REMOVED"
+  | "ROLE_CHANGED"
+  | "WORKSPACE_RENAMED"
+  | "WORKSPACE_SLUG_CHANGED"
+  | "MEMBER_JOINED"
+  | "WORKSPACE_SWITCHED"
+  | "PROFILE_UPDATED"
+  | "CONTENT_CREATED"
+  | "CONTENT_DELETED";
+
+export interface AuditLog {
+  id: string;
+  workspaceId: string;
+  actorId: string;
+  action: AuditAction;
+  entityType: string;
+  entityId?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface WorkspaceSummary {
+  id: string;
+  name: string;
+  slug: string;
+  ownerId: string;
+  role: WorkspaceRole;
+  isCurrent: boolean;
+  memberCount?: number;
+}
+
+export interface WorkspaceMemberDetail {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: WorkspaceRole;
+  name: string;
+  email: string;
+  creatorTag?: string;
+  avatarUrl?: string;
+  createdAt: string;
+}
+
+export interface UserProfileData {
+  id: string;
+  name: string;
+  email: string;
+  creatorTag: string;
+  avatarUrl: string;
+  bio: string;
+  timezone: string;
+}
+
+export interface WorkspaceDashboardData {
+  workspace: Workspace;
+  role: WorkspaceRole;
+  counts: {
+    ideas: number;
+    characters: number;
+    scripts: number;
+    videos: number;
+    events: number;
+  };
+  recentIdeas: IdeaItem[];
+  recentScripts: Script[];
+  recentVideos: Video[];
+  upcomingEvents: CalendarEvent[];
+  analyticsSummary: {
+    totalViews: number;
+    totalLikes: number;
+    totalComments: number;
+    publishedVideosCount: number;
+    averageViews: number;
+    averageEngagementRate: number;
+  };
 }
 

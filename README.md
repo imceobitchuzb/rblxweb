@@ -6,7 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
 ![Prisma](https://img.shields.io/badge/Prisma-5.20-2D3748?style=for-the-badge&logo=prisma)
-![Tests](https://img.shields.io/badge/Tests-94%20Passing-22C55E?style=for-the-badge&logo=node.js)
+![Tests](https://img.shields.io/badge/Tests-128%20Passing-22C55E?style=for-the-badge&logo=node.js)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
 **The Modern Content-Management & Analytics Operating System for Roblox Creators**
@@ -79,6 +79,13 @@ The system ensures complete relational integrity across the creator workflow:
 - Character ROI leaderboard correlating character appearances with engagement.
 - Automated algorithmic creator insights.
 
+### 🏢 Creator Workspace & Collaboration (`/settings?tab=workspace`)
+- Multi-workspace switcher with instantaneous JWT re-signing and secure cookie updates.
+- Role-based team management (`OWNER`, `ADMIN`, `MEMBER`) with role escalation defense.
+- Cryptographically secure 64-char invitation links (SHA-256 hashed storage, 7-day expiry).
+- Scoped and sanitized workspace audit log stream with automatic secret scrubbing.
+- User profile management with avatar validation, bio length limits, and IANA timezone normalization.
+
 ### ⌨️ Shell & Global Navigation
 - **Command Palette (`Ctrl + K` / `Cmd + K`)**: Instant studio navigation and creator quick-actions.
 - **Unified Global Search**: Multi-entity instant search indexing across Ideas, Characters, Scripts, and Videos.
@@ -97,7 +104,7 @@ The system ensures complete relational integrity across the creator workflow:
 | **Authentication** | [bcryptjs](https://github.com/dcodeIO/bcrypt.js) + [jose](https://github.com/panva/jose) (Signed JWT sessions, HTTP-only cookies) |
 | **Icons** | [Lucide React](https://lucide.dev/) |
 | **Database ORM** | [Prisma 5](https://www.prisma.io/) (Relational schema ready for PostgreSQL) |
-| **Testing** | Node.js Test Runner + [tsx](https://github.com/privatenumber/tsx) (87 tests) |
+| **Testing** | Node.js Test Runner + [tsx](https://github.com/privatenumber/tsx) (128 tests passing) |
 | **Code Quality** | ESLint (`next/core-web-vitals`), Prettier-compatible conventions |
 
 ---
@@ -123,14 +130,14 @@ rblxweb/
 │   ├── videos/               # Video Studio & Asset Pipeline
 │   ├── calendar/             # Content Calendar & Timetable
 │   ├── analytics/            # Creator Intelligence & Multi-Channel Engine
-│   └── settings/             # Studio Preferences & Workspace Config
+│   └── settings/             # Studio Preferences, Profile & Workspace Config
 ├── middleware.ts             # Edge route protection & JWT verification
 ├── components/
 │   ├── auth/                 # AuthCard, LoginForm, RegisterForm
 │   ├── command/              # CommandPalette (Ctrl+K)
 │   ├── search/               # Multi-Entity Global Search Modal
 │   ├── notifications/        # NotificationCenter Popover
-│   ├── layout/               # Sidebar, TopNav (with User & Workspace Menu), Breadcrumbs
+│   ├── layout/               # Sidebar, TopNav (with User & Workspace Switcher), Breadcrumbs
 │   └── ui/                   # Button, Card, Badge, Input, Modal, Skeleton
 ├── docs/
 │   ├── ARCHITECTURE.md       # Technical architecture specification
@@ -151,17 +158,29 @@ rblxweb/
 │   ├── calendar-utils.ts     # Calendar grid generation
 │   ├── prisma.ts             # Prisma client singleton & connection tester
 │   └── server/               # Server-side data access & validation
+│       ├── workspaces.ts     # Multi-tenant workspace switcher & membership
+│       ├── invitations.ts    # Cryptographic SHA-256 invitation lifecycle
+│       ├── audit.ts          # Sanitized immutable workspace audit logger
+│       ├── profile.ts        # User profile & timezone normalization
+│       ├── dashboard.ts      # Workspace-scoped metrics & empty states
+│       ├── search.ts         # Workspace-scoped multi-entity search
 │       ├── ideas.ts          # Ideas persistence (workspace-scoped)
 │       ├── characters.ts     # Character persistence & dependency guards
 │       ├── scripts.ts        # Screenplays & scene hierarchy
 │       ├── videos.ts         # Video asset persistence
 │       ├── calendar.ts       # Calendar drop scheduling
 │       ├── analytics.ts      # Database-driven analytics feeder
-│       ├── validation.ts     # Server input validation rules (including Auth)
+│       ├── validation.ts     # Server input validation rules
 │       ├── store.ts          # Offline multi-tenant development fallback store
 │       └── user-context.ts   # User & Workspace Context abstraction
 ├── app/actions/              # Next.js Server Actions ("use server")
 │   ├── auth.ts               # Registration, Login, Logout actions
+│   ├── workspace.ts          # Workspace switching, members & roles
+│   ├── invitations.ts        # Invitation generation, acceptance & revocation
+│   ├── profile.ts            # User profile mutations
+│   ├── dashboard.ts          # Workspace dashboard data fetcher
+│   ├── search.ts             # Workspace-scoped search action
+│   ├── audit.ts              # Workspace audit logs fetcher
 │   ├── ideas.ts              # Idea CRUD actions
 │   ├── characters.ts         # Character CRUD actions
 │   ├── scripts.ts            # Screenplay & scene CRUD actions
@@ -171,7 +190,7 @@ rblxweb/
 ├── prisma/
 │   ├── schema.prisma         # Production PostgreSQL multi-tenant relational schema
 │   └── seed.ts               # Production demo database seeder
-├── tests/                    # 87 comprehensive automated tests
+├── tests/                    # 128 comprehensive automated tests
 │   ├── architecture.test.ts  # Route and design tokens tests (4 tests)
 │   ├── ideas.test.ts         # Ideas Studio tests (12 tests)
 │   ├── characters.test.ts    # Character Roster tests (6 tests)
@@ -181,8 +200,10 @@ rblxweb/
 │   ├── analytics.test.ts     # Analytics engine tests (16 tests)
 │   ├── shell-navigation.test.ts # Search & notification tests (8 tests)
 │   ├── database.test.ts      # Persistence, validation & cascade tests (11 tests)
-│   ├── auth.test.ts          # Password hashing, JWT & auth action tests (7 tests)
-│   └── authorization.test.ts # Multi-tenant isolation & permissions tests (3 tests)
+│   ├── auth.test.ts          # Password hashing, JWT & auth action tests (12 tests)
+│   ├── authorization.test.ts # Multi-tenant isolation & permissions tests (5 tests)
+│   ├── workspaces.test.ts    # Workspace membership, switching & profiles (17 tests)
+│   └── invitations-audit.test.ts # Cryptographic invites, audit & tenant search (17 tests)
 ├── CHANGELOG.md              # Detailed release history
 └── package.json
 ```
@@ -212,7 +233,7 @@ ROXIE HUB uses a modern, multi-tier full-stack persistence architecture:
 ### Relational Features:
 - **Cascading Deletions**: Deleting a `Script` cascades to `Scene`, which cascades to `DialogueLine` records.
 - **Dependency Protection**: Deleting a `Character` is guarded by `onDelete: Restrict`; if the character is referenced by existing screenplays, deletion is blocked with an actionable error.
-- **Indexed Fields**: High-throughput fields (`userId`, `status`, `category`, `platform`, `publishedAt`, `scheduledAt`) are indexed for sub-millisecond lookups.
+- **Indexed Fields**: High-throughput fields (`userId`, `workspaceId`, `status`, `category`, `platform`, `publishedAt`, `scheduledAt`, `tokenHash`) are indexed for sub-millisecond lookups.
 - **Offline Development Resilience**: When PostgreSQL is offline or during static site generation (`next build`), `lib/server/store.ts` provides a deterministic development fallback store, ensuring zero development downtime.
 
 ### Database CLI Commands:
@@ -225,7 +246,7 @@ npx prisma validate
 npx prisma generate
 
 # Create and apply migrations (requires PostgreSQL)
-npx prisma migrate dev --name init_roxie_hub_persistence
+npx prisma migrate dev --name phase_8_creator_workspace_collaboration
 
 # Seed database with complete creator demo records
 npx prisma db seed
@@ -241,7 +262,7 @@ npx prisma studio
 Every major domain feature is backed by isolated unit tests using pure functions:
 
 ```bash
-# Run the complete test suite (94 tests)
+# Run the complete test suite (128 tests)
 npm test
 
 # Run TypeScript strict type-check (0 errors)
@@ -266,8 +287,9 @@ npm run build
 - [x] **Phase 5.5**: UX Shell, Global Search, Command Palette (Ctrl+K), Notification Center, Landing Page, Documentation
 - [x] **Phase 6**: PostgreSQL Persistence with Prisma Client & Server Actions
 - [x] **Phase 7**: Authentication & Multi-Creator Studio Workspaces (Audited & Hardened)
-- [ ] **Phase 8**: Live YouTube Data API v3 & TikTok Creator API Integrations
-- [ ] **Phase 9**: AI Assistant for Roblox Scriptwriting & Thumbnail Concepting
+- [x] **Phase 8**: Creator Workspace & Collaboration Layer (Switcher, RBAC, Invitations, Audit Logs, Profiles)
+- [ ] **Phase 9**: Live YouTube Data API v3 & TikTok Creator API Integrations
+- [ ] **Phase 10**: AI Assistant for Roblox Scriptwriting & Thumbnail Concepting
 
 ---
 

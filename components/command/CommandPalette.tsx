@@ -15,6 +15,7 @@ import {
   Plus,
   ArrowRight,
   Search,
+  Building2,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { cn } from "@/lib/utils";
@@ -97,6 +98,14 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
         subtitle: "Views, engagement rates & channel benchmarks",
         icon: BarChart3,
         action: () => router.push("/analytics"),
+      },
+      {
+        id: "nav-workspace",
+        category: "Navigation",
+        title: "Go to Workspace & Team",
+        subtitle: "Team members, roles, invitations & audit logs",
+        icon: Building2,
+        action: () => router.push("/settings?tab=workspace"),
       },
       {
         id: "nav-settings",

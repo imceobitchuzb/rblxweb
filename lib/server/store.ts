@@ -5,12 +5,14 @@ import { INITIAL_SCRIPTS } from "../mock-scripts";
 import { INITIAL_VIDEOS } from "../mock-videos";
 import { INITIAL_CALENDAR_EVENTS } from "../mock-calendar";
 import {
+  AuditLog,
   CalendarEvent,
   Character,
   IdeaItem,
   Script,
   Video,
   Workspace,
+  WorkspaceInvitation,
   WorkspaceMember,
 } from "../types";
 
@@ -21,6 +23,8 @@ export interface UserRecord {
   name: string;
   creatorTag: string;
   avatarUrl: string;
+  bio?: string;
+  timezone?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -83,6 +87,8 @@ class MemoryStore {
       name: "Roxie Velocity",
       creatorTag: "ROXIE_PRO",
       avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+      bio: "Roblox content creator & animation director focusing on MM2 & BedWars.",
+      timezone: "America/New_York",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -107,6 +113,20 @@ class MemoryStore {
       role: "OWNER",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+    },
+  ];
+
+  invitations: WorkspaceInvitation[] = [];
+  auditLogs: AuditLog[] = [
+    {
+      id: "audit-demo-1",
+      workspaceId: DEMO_WORKSPACE_ID,
+      actorId: DEMO_USER_ID,
+      action: "WORKSPACE_RENAMED",
+      entityType: "WORKSPACE",
+      entityId: DEMO_WORKSPACE_ID,
+      metadata: { name: "Roxie Velocity Studio" },
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
     },
   ];
 

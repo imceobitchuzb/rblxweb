@@ -16,6 +16,13 @@ enum WorkspaceRole {
   MEMBER
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
 enum IdeaStatus {
   IDEA
   PLANNING
@@ -104,24 +111,27 @@ enum CalendarEventStatus {
 }
 
 model User {
-  id             String            @id @default(cuid())
-  email          String            @unique
-  passwordHash   String?
-  name           String?
-  creatorTag     String?           @unique
-  avatarUrl      String?
-  bio            String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  email           String            @unique
+  passwordHash    String?
+  name            String?
+  creatorTag      String?           @unique
+  avatarUrl       String?
+  bio             String?
+  timezone        String?           @default("UTC")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
-  memberships    WorkspaceMember[]
-  ownedWorkspaces Workspace[]      @relation("WorkspaceOwner")
-  ideas          Idea[]
-  videos         Video[]
-  scripts        Script[]
-  characters     Character[]
-  calendarEvents CalendarEvent[]
-  settings       UserSettings?
+  memberships     WorkspaceMember[]
+  ownedWorkspaces Workspace[]       @relation("WorkspaceOwner")
+  ideas           Idea[]
+  videos          Video[]
+  scripts         Script[]
+  characters      Character[]
+  calendarEvents  CalendarEvent[]
+  settings        UserSettings?
+  invitationsSent WorkspaceInvitation[] @relation("InvitationsSent")
+  auditLogs       AuditLog[]
 }
 
 model Workspace {
@@ -139,9 +149,49 @@ model Workspace {
   scripts        Script[]
   videos         Video[]
   calendarEvents CalendarEvent[]
+  invitations    WorkspaceInvitation[]
+  auditLogs      AuditLog[]
 
   @@index([ownerId])
   @@index([slug])
+}
+
+model WorkspaceInvitation {
+  id          String           @id @default(cuid())
+  workspaceId String
+  email       String
+  role        WorkspaceRole    @default(MEMBER)
+  tokenHash   String           @unique
+  status      InvitationStatus @default(PENDING)
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy   User             @relation("InvitationsSent", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([tokenHash])
+  @@index([email])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  actorId     String
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor       User      @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([actorId])
+  @@index([createdAt])
 }
 
 model WorkspaceMember {
