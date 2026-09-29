@@ -12,8 +12,10 @@ export type IdeaCategory =
   | "STORY"
   | "TREND"
   | "SHORT"
-  | "LONG VIDEO"
+  | "LONG_VIDEO"
   | "OTHER";
+
+export type IdeaPriority = "LOW" | "MEDIUM" | "HIGH" | "HOT";
 
 export type VideoPlatform =
   | "YOUTUBE"
@@ -36,7 +38,9 @@ export interface IdeaItem {
   description: string;
   category: IdeaCategory;
   status: IdeaStatus;
+  priority: IdeaPriority;
   tags: string[];
+  potentialScore: number; // 1 to 10
   createdAt: string;
   updatedAt: string;
 }

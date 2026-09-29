@@ -36,7 +36,7 @@ test("Duration formatting handles seconds properly", () => {
 });
 
 test("Roblox content categories and statuses are defined", () => {
-  const categories = ["MM2", "FUNNY", "STORY", "TREND", "SHORT", "LONG VIDEO", "OTHER"];
+  const categories = ["MM2", "FUNNY", "STORY", "TREND", "SHORT", "LONG_VIDEO", "OTHER"];
   for (const cat of categories) {
     assert.ok(CATEGORY_COLORS[cat as keyof typeof CATEGORY_COLORS], `Category ${cat} is configured`);
   }

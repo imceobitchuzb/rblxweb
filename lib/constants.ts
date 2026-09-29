@@ -9,7 +9,85 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
-import type { IdeaCategory, IdeaStatus, VideoPlatform } from "./types";
+import type { IdeaCategory, IdeaPriority, IdeaStatus, VideoPlatform } from "./types";
+
+export const CATEGORY_COLORS: Record<IdeaCategory, { bg: string; text: string; border: string }> = {
+  MM2: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30" },
+  FUNNY: { bg: "bg-yellow-500/10", text: "text-yellow-400", border: "border-yellow-500/30" },
+  STORY: { bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/30" },
+  TREND: { bg: "bg-cyan-500/10", text: "text-cyan-400", border: "border-cyan-500/30" },
+  SHORT: { bg: "bg-pink-500/10", text: "text-pink-400", border: "border-pink-500/30" },
+  LONG_VIDEO: { bg: "bg-indigo-500/10", text: "text-indigo-400", border: "border-indigo-500/30" },
+  OTHER: { bg: "bg-slate-500/10", text: "text-slate-400", border: "border-slate-500/30" },
+};
+
+export const CATEGORY_LABELS: Record<IdeaCategory, string> = {
+  MM2: "MM2",
+  FUNNY: "Funny",
+  STORY: "Story",
+  TREND: "Trend",
+  SHORT: "Short",
+  LONG_VIDEO: "Long Video",
+  OTHER: "Other",
+};
+
+export const STATUS_COLORS: Record<IdeaStatus, { bg: string; text: string; dot: string }> = {
+  IDEA: { bg: "bg-slate-800/60", text: "text-slate-300", dot: "bg-slate-400" },
+  PLANNING: { bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
+  SCRIPTING: { bg: "bg-purple-900/40", text: "text-purple-300", dot: "bg-purple-400" },
+  PRODUCTION: { bg: "bg-amber-900/40", text: "text-amber-300", dot: "bg-amber-400" },
+  PUBLISHED: { bg: "bg-emerald-900/40", text: "text-emerald-300", dot: "bg-emerald-400" },
+  ARCHIVED: { bg: "bg-zinc-800/40", text: "text-zinc-400", dot: "bg-zinc-500" },
+};
+
+export const STATUS_LABELS: Record<IdeaStatus, string> = {
+  IDEA: "Idea",
+  PLANNING: "Planning",
+  SCRIPTING: "Scripting",
+  PRODUCTION: "Production",
+  PUBLISHED: "Published",
+  ARCHIVED: "Archived",
+};
+
+export const STATUS_PROGRESSION: IdeaStatus[] = [
+  "IDEA",
+  "PLANNING",
+  "SCRIPTING",
+  "PRODUCTION",
+  "PUBLISHED",
+  "ARCHIVED",
+];
+
+export const PRIORITY_CONFIG: Record<
+  IdeaPriority,
+  { label: string; badgeVariant: "default" | "purple" | "amber" | "crimson"; glow?: boolean }
+> = {
+  LOW: { label: "Low", badgeVariant: "default" },
+  MEDIUM: { label: "Medium", badgeVariant: "purple" },
+  HIGH: { label: "High", badgeVariant: "amber" },
+  HOT: { label: "HOT 🔥", badgeVariant: "crimson", glow: true },
+};
+
+export const ALL_CATEGORIES: IdeaCategory[] = [
+  "MM2",
+  "FUNNY",
+  "STORY",
+  "TREND",
+  "SHORT",
+  "LONG_VIDEO",
+  "OTHER",
+];
+
+export const ALL_STATUSES: IdeaStatus[] = [
+  "IDEA",
+  "PLANNING",
+  "SCRIPTING",
+  "PRODUCTION",
+  "PUBLISHED",
+  "ARCHIVED",
+];
+
+export const ALL_PRIORITIES: IdeaPriority[] = ["LOW", "MEDIUM", "HIGH", "HOT"];
 
 export interface NavItem {
   title: string;
@@ -70,24 +148,7 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export const CATEGORY_COLORS: Record<IdeaCategory, { bg: string; text: string; border: string }> = {
-  MM2: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30" },
-  FUNNY: { bg: "bg-yellow-500/10", text: "text-yellow-400", border: "border-yellow-500/30" },
-  STORY: { bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/30" },
-  TREND: { bg: "bg-cyan-500/10", text: "text-cyan-400", border: "border-cyan-500/30" },
-  SHORT: { bg: "bg-pink-500/10", text: "text-pink-400", border: "border-pink-500/30" },
-  "LONG VIDEO": { bg: "bg-indigo-500/10", text: "text-indigo-400", border: "border-indigo-500/30" },
-  OTHER: { bg: "bg-slate-500/10", text: "text-slate-400", border: "border-slate-500/30" },
-};
 
-export const STATUS_COLORS: Record<IdeaStatus, { bg: string; text: string; dot: string }> = {
-  IDEA: { bg: "bg-slate-800/60", text: "text-slate-300", dot: "bg-slate-400" },
-  PLANNING: { bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
-  SCRIPTING: { bg: "bg-purple-900/40", text: "text-purple-300", dot: "bg-purple-400" },
-  PRODUCTION: { bg: "bg-amber-900/40", text: "text-amber-300", dot: "bg-amber-400" },
-  PUBLISHED: { bg: "bg-emerald-900/40", text: "text-emerald-300", dot: "bg-emerald-400" },
-  ARCHIVED: { bg: "bg-zinc-800/40", text: "text-zinc-400", dot: "bg-zinc-500" },
-};
 
 export const PLATFORM_CONFIG: Record<VideoPlatform, { label: string; color: string; badge: string }> = {
   YOUTUBE: { label: "YouTube", color: "#FF0000", badge: "bg-red-600/20 text-red-400 border-red-500/30" },
