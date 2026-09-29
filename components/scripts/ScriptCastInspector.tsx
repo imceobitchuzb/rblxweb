@@ -157,6 +157,15 @@ export function ScriptCastInspector({
             <ArrowRight className="w-3.5 h-3.5 ml-1" />
           </Button>
         )}
+
+        <Link
+          href={`/videos?createFromScript=${script.id}`}
+          className="w-full inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-500/30 text-xs font-semibold transition-colors"
+        >
+          <Film className="w-3.5 h-3.5 text-violet-400" />
+          <span>Create Video Asset</span>
+          <ArrowRight className="w-3 h-3 ml-auto text-violet-400" />
+        </Link>
       </div>
 
       {/* Cast Roster in this Script */}

@@ -10,6 +10,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import type {
+  CalendarEventStatus,
+  CalendarEventType,
   CharacterRole,
   DialogueEmotion,
   IdeaCategory,
@@ -17,6 +19,7 @@ import type {
   IdeaStatus,
   ScriptStatus,
   VideoPlatform,
+  VideoStatus,
 } from "./types";
 
 export const ALL_ROLES: CharacterRole[] = [
@@ -279,11 +282,106 @@ export const MAIN_NAV_ITEMS: NavItem[] = [
 
 
 
-export const PLATFORM_CONFIG: Record<VideoPlatform, { label: string; color: string; badge: string }> = {
-  YOUTUBE: { label: "YouTube", color: "#FF0000", badge: "bg-red-600/20 text-red-400 border-red-500/30" },
-  YOUTUBE_SHORTS: { label: "YT Shorts", color: "#FF0000", badge: "bg-rose-600/20 text-rose-400 border-rose-500/30" },
-  TIKTOK: { label: "TikTok", color: "#00F2FE", badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" },
-  ROBLOX: { label: "Roblox", color: "#00A2FF", badge: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
+export const ALL_VIDEO_PLATFORMS: VideoPlatform[] = [
+  "YOUTUBE_SHORTS",
+  "YOUTUBE",
+  "TIKTOK",
+  "INSTAGRAM_REELS",
+];
+
+export const PLATFORM_CONFIG: Record<
+  VideoPlatform,
+  { label: string; color: string; badge: string }
+> = {
+  YOUTUBE_SHORTS: {
+    label: "YT Shorts",
+    color: "#FF0000",
+    badge: "bg-rose-600/20 text-rose-400 border-rose-500/30",
+  },
+  YOUTUBE: {
+    label: "YouTube",
+    color: "#FF0000",
+    badge: "bg-red-600/20 text-red-400 border-red-500/30",
+  },
+  TIKTOK: {
+    label: "TikTok",
+    color: "#00F2FE",
+    badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+  },
+  INSTAGRAM_REELS: {
+    label: "IG Reels",
+    color: "#E1306C",
+    badge: "bg-pink-600/20 text-pink-400 border-pink-500/30",
+  },
+};
+
+export const ALL_VIDEO_STATUSES: VideoStatus[] = [
+  "PLANNING",
+  "IN_PRODUCTION",
+  "EDITING",
+  "READY",
+  "SCHEDULED",
+  "PUBLISHED",
+  "ARCHIVED",
+];
+
+export const VIDEO_STATUS_LABELS: Record<VideoStatus, string> = {
+  PLANNING: "Planning",
+  IN_PRODUCTION: "In Production",
+  EDITING: "Editing",
+  READY: "Ready",
+  SCHEDULED: "Scheduled",
+  PUBLISHED: "Published",
+  ARCHIVED: "Archived",
+};
+
+export const VIDEO_STATUS_CONFIG: Record<
+  VideoStatus,
+  { label: string; bg: string; text: string; dot: string }
+> = {
+  PLANNING: { label: "Planning", bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
+  IN_PRODUCTION: { label: "In Production", bg: "bg-amber-900/40", text: "text-amber-300", dot: "bg-amber-400" },
+  EDITING: { label: "Editing", bg: "bg-purple-900/40", text: "text-purple-300", dot: "bg-purple-400" },
+  READY: { label: "Ready", bg: "bg-cyan-900/40", text: "text-cyan-300", dot: "bg-cyan-400" },
+  SCHEDULED: { label: "Scheduled", bg: "bg-indigo-900/40", text: "text-indigo-300", dot: "bg-indigo-400" },
+  PUBLISHED: { label: "Published", bg: "bg-emerald-900/40", text: "text-emerald-300", dot: "bg-emerald-400" },
+  ARCHIVED: { label: "Archived", bg: "bg-zinc-800/40", text: "text-zinc-400", dot: "bg-zinc-500" },
+};
+
+export const ALL_CALENDAR_EVENT_TYPES: CalendarEventType[] = [
+  "VIDEO",
+  "UPLOAD",
+  "PREMIERE",
+  "IDEA",
+  "DEADLINE",
+];
+
+export const CALENDAR_EVENT_TYPE_CONFIG: Record<
+  CalendarEventType,
+  { label: string; bg: string; text: string; border: string }
+> = {
+  VIDEO: { label: "Video Release", bg: "bg-violet-500/15", text: "text-violet-300", border: "border-violet-500/30" },
+  UPLOAD: { label: "Upload Slot", bg: "bg-cyan-500/15", text: "text-cyan-300", border: "border-cyan-500/30" },
+  PREMIERE: { label: "Live Premiere", bg: "bg-rose-500/15", text: "text-rose-300", border: "border-rose-500/30" },
+  IDEA: { label: "Brainstorm Session", bg: "bg-amber-500/15", text: "text-amber-300", border: "border-amber-500/30" },
+  DEADLINE: { label: "Edit Deadline", bg: "bg-red-500/15", text: "text-red-300", border: "border-red-500/30" },
+};
+
+export const ALL_CALENDAR_STATUSES: CalendarEventStatus[] = [
+  "PLANNED",
+  "READY",
+  "PUBLISHED",
+  "CANCELLED",
+];
+
+export const CALENDAR_STATUS_CONFIG: Record<
+  CalendarEventStatus,
+  { label: string; bg: string; text: string; dot: string }
+> = {
+  PLANNED: { label: "Planned", bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
+  READY: { label: "Ready", bg: "bg-cyan-900/40", text: "text-cyan-300", dot: "bg-cyan-400" },
+  PUBLISHED: { label: "Published", bg: "bg-emerald-900/40", text: "text-emerald-300", dot: "bg-emerald-400" },
+  CANCELLED: { label: "Cancelled", bg: "bg-zinc-800/40", text: "text-zinc-400", dot: "bg-zinc-500" },
 };
 
 export const DEFAULT_CREATOR = {

@@ -18,12 +18,19 @@ export type IdeaCategory =
 export type IdeaPriority = "LOW" | "MEDIUM" | "HIGH" | "HOT";
 
 export type VideoPlatform =
-  | "YOUTUBE"
   | "YOUTUBE_SHORTS"
+  | "YOUTUBE"
   | "TIKTOK"
-  | "ROBLOX";
+  | "INSTAGRAM_REELS";
 
-export type VideoStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
+export type VideoStatus =
+  | "PLANNING"
+  | "IN_PRODUCTION"
+  | "EDITING"
+  | "READY"
+  | "SCHEDULED"
+  | "PUBLISHED"
+  | "ARCHIVED";
 
 export type CharacterRole =
   | "MAIN"
@@ -45,20 +52,32 @@ export interface IdeaItem {
   updatedAt: string;
 }
 
-export interface VideoItem {
+export interface Video {
   id: string;
   title: string;
   description: string;
-  thumbnail: string;
-  platform: VideoPlatform;
   status: VideoStatus;
+  platform: VideoPlatform;
+  thumbnail: string;
+  duration: number; // in seconds
+  durationSeconds?: number; // backwards compatibility alias
+  scriptId?: string;
+  ideaId?: string;
+  characterIds: string[];
+  tags: string[];
   views: number;
   likes: number;
   comments: number;
-  durationSeconds: number;
-  publicationDate?: string;
-  tags: string[];
+  publishedAt?: string;
+  publicationDate?: string; // backwards compatibility alias
+  scheduledAt?: string;
+  url?: string;
+  createdAt: string;
+  updatedAt: string;
 }
+
+// Backward compatibility alias
+export type VideoItem = Video;
 
 export type DialogueEmotion =
   | "NEUTRAL"
@@ -135,15 +154,35 @@ export interface Character {
 // Backward compatibility alias
 export type CharacterItem = Character;
 
-export interface CalendarEventItem {
+export type CalendarEventType =
+  | "VIDEO"
+  | "UPLOAD"
+  | "PREMIERE"
+  | "IDEA"
+  | "DEADLINE";
+
+export type CalendarEventStatus =
+  | "PLANNED"
+  | "READY"
+  | "PUBLISHED"
+  | "CANCELLED";
+
+export interface CalendarEvent {
   id: string;
   title: string;
-  scheduledDate: string;
-  platform: VideoPlatform;
-  status: VideoStatus;
+  type: CalendarEventType;
   videoId?: string;
+  platform: VideoPlatform;
+  status: CalendarEventStatus;
+  scheduledAt: string;
+  scheduledDate?: string; // backwards compatibility alias
   notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
+
+// Backward compatibility alias
+export type CalendarEventItem = CalendarEvent;
 
 export interface AnalyticsSummary {
   totalViews: number;
