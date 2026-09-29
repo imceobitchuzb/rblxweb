@@ -38,10 +38,32 @@ export interface UserSettingsRecord {
 
 export const DEMO_USER_ID = "user-creator-roxie";
 export const DEMO_WORKSPACE_ID = "workspace-demo-roxie";
-export const DEMO_DEFAULT_PASSWORD = "RoxieHub2026!";
+export const DEMO_DEFAULT_PASSWORD =
+  process.env.DEMO_USER_PASSWORD ||
+  (process.env.NODE_ENV !== "production" ? "RoxieHub2026!" : "");
 
-// Pre-computed hash of "RoxieHub2026!"
-const DEMO_PASSWORD_HASH = bcrypt.hashSync(DEMO_DEFAULT_PASSWORD, 10);
+// Pre-computed hash of demo password, disabled with dummy hash if demo password is unset
+const DEMO_PASSWORD_HASH = DEMO_DEFAULT_PASSWORD
+  ? bcrypt.hashSync(DEMO_DEFAULT_PASSWORD, 10)
+  : "$2a$10$e7xEXAMPLEdummyhashthatnevermatchesanything1234567890";
+
+/**
+ * Asserts that the persistent database layer is active in production.
+ * In production mode (NODE_ENV === "production"), ROXIE HUB strictly prohibits
+ * falling back to ephemeral in-memory stores to prevent silent data loss and
+ * unpersisted tenant isolation breaches.
+ */
+export function assertPersistentDatabase(operation: string, error?: unknown): void {
+  if (process.env.NODE_ENV === "production") {
+    const errorMsg = error instanceof Error ? error.message : String(error ?? "Database connection unavailable");
+    console.error(
+      `[Production Persistence Failure] Operation '${operation}' aborted because persistent database is required in production: ${errorMsg}`
+    );
+    throw new Error(
+      `[Production Persistence Failure] Database is required in production mode. Fallback in-memory operations are disabled for security and data integrity during '${operation}'. Root cause: ${errorMsg}`
+    );
+  }
+}
 
 function tagWithDemoWorkspace<T extends { workspaceId?: string; userId?: string }>(items: T[]): T[] {
   return items.map((item) => ({

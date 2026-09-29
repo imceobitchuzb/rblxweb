@@ -43,10 +43,13 @@ export function canEditContent(role: WorkspaceRole): boolean {
 
 /**
  * Content deletion permission.
- * By default, OWNER and ADMIN have administrative delete rights; MEMBERS can delete workspace content.
+ * OWNER and ADMIN have administrative delete rights over all content in the workspace.
+ * MEMBERS can delete their own authored content.
  */
-export function canDeleteContent(role: WorkspaceRole): boolean {
-  return Boolean(ROLE_HIERARCHY[role]);
+export function canDeleteContent(role: WorkspaceRole, isAuthor: boolean = true): boolean {
+  if (role === "OWNER" || role === "ADMIN") return true;
+  if (role === "MEMBER") return isAuthor;
+  return false;
 }
 
 /**

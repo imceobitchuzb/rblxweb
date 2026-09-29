@@ -160,8 +160,15 @@ ROXIE HUB executes an end-to-end continuous loop for Roblox creators:
 3. **Cross-Tenant Isolation Defense**:
    - Every database query strictly filters by `workspaceId: activeWorkspaceId`.
    - Any attempt by User B to view, update, or delete records in Workspace A returns `null` or raises an authorization rejection.
-4. **Offline Development Fallback**:
-   - The in-memory store (`lib/server/store.ts`) implements the identical multi-tenant isolation model, enabling automated test execution and offline development without an active PostgreSQL instance.
+4. **Offline Development Fallback vs. Production Persistence Guard**:
+   - For offline test runners and local development, the in-memory store (`lib/server/store.ts`) mirrors the identical multi-tenant isolation model.
+   - **Production Hardening (`assertPersistentDatabase`)**: In `NODE_ENV === "production"`, silent fallback to the ephemeral in-memory store is strictly prohibited. If database connectivity is disrupted or unavailable during any operation, an explicit `[Production Persistence Failure]` server exception is raised to prevent silent data loss or unpersisted state breaches.
+5. **Session Secret & Cryptographic Security**:
+   - In production, `SESSION_SECRET` is strictly enforced to be at least 32 characters. Missing or weak secrets trigger immediate critical runtime halts (`[SECURITY CRITICAL]`).
+6. **Open Redirect Defense**:
+   - `getSafeCallbackUrl` inspects incoming `callbackUrl` query parameters, disallowing protocol-relative URLs (`//evil.com`), backslash escapes (`/\evil.com`), and javascript URI schemes, safely falling back to `/dashboard`.
+7. **Demo Credential Gating**:
+   - Demo credentials and quick-login helpers are automatically disabled in production mode unless explicitly opted into via `NEXT_PUBLIC_ENABLE_DEMO_LOGIN="true"`.
 
 ---
 
@@ -196,9 +203,9 @@ All state calculation, transformation, filtering, authorization, and data access
 | Analytics & Insights Engine | `lib/analytics-utils.ts` | `tests/analytics.test.ts` | 16 tests |
 | Shell, Search & Notifications | `lib/search-utils.ts`, `lib/notification-utils.ts` | `tests/shell-navigation.test.ts` | 8 tests |
 | Database & Persistence | `lib/server/...`, `lib/prisma.ts` | `tests/database.test.ts` | 11 tests |
-| Authentication System | `lib/auth/password.ts`, `lib/auth/session.ts` | `tests/auth.test.ts` | 7 tests |
-| Multi-Tenant Authorization | `lib/auth/permissions.ts`, `lib/auth/context.ts` | `tests/authorization.test.ts` | 3 tests |
-| **Total Passing Tests** | | | **87 tests** |
+| Authentication System | `lib/auth/password.ts`, `lib/auth/session.ts` | `tests/auth.test.ts` | 12 tests |
+| Multi-Tenant Authorization | `lib/auth/permissions.ts`, `lib/auth/context.ts` | `tests/authorization.test.ts` | 5 tests |
+| **Total Passing Tests** | | | **94 tests** |
 
 ---
 

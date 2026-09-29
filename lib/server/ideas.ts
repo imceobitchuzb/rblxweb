@@ -1,7 +1,7 @@
 import { prisma } from "../prisma";
 import { IdeaItem, IdeaStatus } from "../types";
 import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
-import { memoryStore } from "./store";
+import { memoryStore, assertPersistentDatabase } from "./store";
 
 function mapPrismaIdeaToItem(idea: {
   id: string;
@@ -42,13 +42,14 @@ export async function getIdeas(userId?: string, workspaceId?: string): Promise<I
       where: {
         OR: [
           { workspaceId: activeWorkspaceId },
-          { userId: activeUserId },
+          { workspaceId: null, userId: activeUserId },
         ],
       },
       orderBy: { createdAt: "desc" },
     });
     return ideas.map(mapPrismaIdeaToItem);
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("getIdeas", err);
     // Fallback to memory store scoped to active workspace
     return memoryStore.ideas.filter((i) =>
       i.workspaceId ? i.workspaceId === activeWorkspaceId : i.userId === activeUserId
@@ -70,12 +71,13 @@ export async function getIdeaById(
         id,
         OR: [
           { workspaceId: activeWorkspaceId },
-          { userId: activeUserId },
+          { workspaceId: null, userId: activeUserId },
         ],
       },
     });
     return idea ? mapPrismaIdeaToItem(idea) : null;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("getIdeaById", err);
     return (
       memoryStore.ideas.find(
         (i) =>
@@ -130,7 +132,8 @@ export async function createIdeaRecord(
     const mapped = mapPrismaIdeaToItem(created);
     memoryStore.ideas.unshift(mapped);
     return mapped;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("createIdeaRecord", err);
     const now = new Date().toISOString();
     const fallback: IdeaItem = {
       id: `idea-${Date.now()}`,
@@ -161,8 +164,21 @@ export async function updateIdeaRecord(
   const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
+    const existing = await prisma.idea.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      throw new Error(`Idea not found: ${id}`);
+    }
+
     const updated = await prisma.idea.update({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
       data: {
         ...(data.title !== undefined ? { title: data.title } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
@@ -181,7 +197,11 @@ export async function updateIdeaRecord(
     );
     if (idx !== -1) memoryStore.ideas[idx] = mapped;
     return mapped;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Idea not found")) {
+      throw err;
+    }
+    assertPersistentDatabase("updateIdeaRecord", err);
     const idx = memoryStore.ideas.findIndex(
       (i) =>
         i.id === id &&
@@ -209,15 +229,29 @@ export async function deleteIdeaRecord(
   const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
+    const existing = await prisma.idea.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      return false;
+    }
+
     await prisma.idea.delete({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
     });
     memoryStore.ideas = memoryStore.ideas.filter(
       (i) =>
         !(i.id === id && (i.workspaceId ? i.workspaceId === activeWorkspaceId : i.userId === activeUserId))
     );
     return true;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("deleteIdeaRecord", err);
     const initialLen = memoryStore.ideas.length;
     memoryStore.ideas = memoryStore.ideas.filter(
       (i) =>

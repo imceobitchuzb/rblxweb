@@ -1,7 +1,7 @@
 import { prisma } from "../prisma";
 import { DialogueEmotion, DialogueLine, Scene, Script, ScriptStatus } from "../types";
 import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
-import { memoryStore } from "./store";
+import { memoryStore, assertPersistentDatabase } from "./store";
 
 function mapPrismaScriptToItem(script: {
   id: string;
@@ -79,7 +79,7 @@ export async function getScripts(userId?: string, workspaceId?: string): Promise
       where: {
         OR: [
           { workspaceId: activeWorkspaceId },
-          { userId: activeUserId },
+          { workspaceId: null, userId: activeUserId },
         ],
       },
       include: {
@@ -96,7 +96,8 @@ export async function getScripts(userId?: string, workspaceId?: string): Promise
       orderBy: { createdAt: "desc" },
     });
     return scripts.map(mapPrismaScriptToItem);
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("getScripts", err);
     return memoryStore.scripts.filter((s) =>
       s.workspaceId ? s.workspaceId === activeWorkspaceId : s.userId === activeUserId
     );
@@ -117,7 +118,7 @@ export async function getScriptById(
         id,
         OR: [
           { workspaceId: activeWorkspaceId },
-          { userId: activeUserId },
+          { workspaceId: null, userId: activeUserId },
         ],
       },
       include: {
@@ -133,7 +134,8 @@ export async function getScriptById(
       },
     });
     return script ? mapPrismaScriptToItem(script) : null;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("getScriptById", err);
     return (
       memoryStore.scripts.find(
         (s) =>
@@ -198,7 +200,8 @@ export async function createScriptRecord(
     const mapped = mapPrismaScriptToItem(created);
     memoryStore.scripts.unshift(mapped);
     return mapped;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("createScriptRecord", err);
     const now = new Date().toISOString();
     const fallback: Script = {
       id: `script-${Date.now()}`,
@@ -231,8 +234,21 @@ export async function updateScriptRecord(
   const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
+    const existing = await prisma.script.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      throw new Error(`Script not found: ${id}`);
+    }
+
     const updated = await prisma.script.update({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
       data: {
         ...(data.title !== undefined ? { title: data.title } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
@@ -259,7 +275,11 @@ export async function updateScriptRecord(
     );
     if (idx !== -1) memoryStore.scripts[idx] = mapped;
     return mapped;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Script not found")) {
+      throw err;
+    }
+    assertPersistentDatabase("updateScriptRecord", err);
     const idx = memoryStore.scripts.findIndex(
       (s) =>
         s.id === id &&
@@ -285,15 +305,29 @@ export async function deleteScriptRecord(
   const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
+    const existing = await prisma.script.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      return false;
+    }
+
     await prisma.script.delete({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
     });
     memoryStore.scripts = memoryStore.scripts.filter(
       (s) =>
         !(s.id === id && (s.workspaceId ? s.workspaceId === activeWorkspaceId : s.userId === activeUserId))
     );
     return true;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("deleteScriptRecord", err);
     const initialLen = memoryStore.scripts.length;
     memoryStore.scripts = memoryStore.scripts.filter(
       (s) =>

@@ -6,7 +6,7 @@ import {
   VideoPlatform,
 } from "../types";
 import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
-import { memoryStore } from "./store";
+import { memoryStore, assertPersistentDatabase } from "./store";
 
 function mapPrismaEventToItem(evt: {
   id: string;
@@ -50,13 +50,14 @@ export async function getCalendarEvents(
       where: {
         OR: [
           { workspaceId: activeWorkspaceId },
-          { userId: activeUserId },
+          { workspaceId: null, userId: activeUserId },
         ],
       },
       orderBy: { scheduledAt: "asc" },
     });
     return events.map(mapPrismaEventToItem);
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("getCalendarEvents", err);
     return memoryStore.calendarEvents.filter((e) =>
       e.workspaceId ? e.workspaceId === activeWorkspaceId : e.userId === activeUserId
     );
@@ -106,7 +107,8 @@ export async function createCalendarEventRecord(
     const mapped = mapPrismaEventToItem(created);
     memoryStore.calendarEvents.push(mapped);
     return mapped;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("createCalendarEventRecord", err);
     const now = new Date().toISOString();
     const fallback: CalendarEvent = {
       id: `evt-${Date.now()}`,
@@ -137,8 +139,21 @@ export async function updateCalendarEventRecord(
   const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
+    const existing = await prisma.calendarEvent.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      throw new Error(`Calendar event not found: ${id}`);
+    }
+
     const updated = await prisma.calendarEvent.update({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
       data: {
         ...(data.title !== undefined ? { title: data.title } : {}),
         ...(data.scheduledAt !== undefined ? { scheduledAt: new Date(data.scheduledAt) } : {}),
@@ -157,7 +172,11 @@ export async function updateCalendarEventRecord(
     );
     if (idx !== -1) memoryStore.calendarEvents[idx] = mapped;
     return mapped;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Calendar event not found")) {
+      throw err;
+    }
+    assertPersistentDatabase("updateCalendarEventRecord", err);
     const idx = memoryStore.calendarEvents.findIndex(
       (e) =>
         e.id === id &&
@@ -183,15 +202,29 @@ export async function deleteCalendarEventRecord(
   const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
+    const existing = await prisma.calendarEvent.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      return false;
+    }
+
     await prisma.calendarEvent.delete({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
     });
     memoryStore.calendarEvents = memoryStore.calendarEvents.filter(
       (e) =>
         !(e.id === id && (e.workspaceId ? e.workspaceId === activeWorkspaceId : e.userId === activeUserId))
     );
     return true;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("deleteCalendarEventRecord", err);
     const initialLen = memoryStore.calendarEvents.length;
     memoryStore.calendarEvents = memoryStore.calendarEvents.filter(
       (e) =>

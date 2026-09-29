@@ -1,7 +1,7 @@
 import { prisma } from "../prisma";
 import { Video, VideoPlatform, VideoStatus } from "../types";
 import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
-import { memoryStore } from "./store";
+import { memoryStore, assertPersistentDatabase } from "./store";
 
 function mapPrismaVideoToItem(video: {
   id: string;
@@ -60,14 +60,15 @@ export async function getVideos(userId?: string, workspaceId?: string): Promise<
       where: {
         OR: [
           { workspaceId: activeWorkspaceId },
-          { userId: activeUserId },
+          { workspaceId: null, userId: activeUserId },
         ],
       },
       include: { characters: true },
       orderBy: { createdAt: "desc" },
     });
     return videos.map(mapPrismaVideoToItem);
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("getVideos", err);
     return memoryStore.videos.filter((v) =>
       v.workspaceId ? v.workspaceId === activeWorkspaceId : v.userId === activeUserId
     );
@@ -88,13 +89,14 @@ export async function getVideoById(
         id,
         OR: [
           { workspaceId: activeWorkspaceId },
-          { userId: activeUserId },
+          { workspaceId: null, userId: activeUserId },
         ],
       },
       include: { characters: true },
     });
     return video ? mapPrismaVideoToItem(video) : null;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("getVideoById", err);
     return (
       memoryStore.videos.find(
         (v) =>
@@ -165,7 +167,8 @@ export async function createVideoRecord(
     const mapped = mapPrismaVideoToItem(created);
     memoryStore.videos.unshift(mapped);
     return mapped;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("createVideoRecord", err);
     const now = new Date().toISOString();
     const fallback: Video = {
       id: `vid-${Date.now()}`,
@@ -205,8 +208,21 @@ export async function updateVideoRecord(
   const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
+    const existing = await prisma.video.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      throw new Error(`Video not found: ${id}`);
+    }
+
     const updated = await prisma.video.update({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
       data: {
         ...(data.title !== undefined ? { title: data.title } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
@@ -236,7 +252,11 @@ export async function updateVideoRecord(
     );
     if (idx !== -1) memoryStore.videos[idx] = mapped;
     return mapped;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Video not found")) {
+      throw err;
+    }
+    assertPersistentDatabase("updateVideoRecord", err);
     const idx = memoryStore.videos.findIndex(
       (v) =>
         v.id === id &&
@@ -262,15 +282,29 @@ export async function deleteVideoRecord(
   const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
+    const existing = await prisma.video.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      return false;
+    }
+
     await prisma.video.delete({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
     });
     memoryStore.videos = memoryStore.videos.filter(
       (v) =>
         !(v.id === id && (v.workspaceId ? v.workspaceId === activeWorkspaceId : v.userId === activeUserId))
     );
     return true;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("deleteVideoRecord", err);
     const initialLen = memoryStore.videos.length;
     memoryStore.videos = memoryStore.videos.filter(
       (v) =>

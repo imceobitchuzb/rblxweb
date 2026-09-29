@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loginAction } from "../../app/actions/auth";
+import { getSafeCallbackUrl } from "../../lib/auth/url";
 
 export const LoginForm: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = getSafeCallbackUrl(searchParams.get("callbackUrl"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -124,17 +125,20 @@ export const LoginForm: React.FC = () => {
         )}
       </button>
 
-      {/* Demo Account Helper */}
-      <div className="pt-2">
-        <button
-          type="button"
-          onClick={handleFillDemo}
-          className="w-full py-2 px-3 bg-surface-800/40 hover:bg-surface-800/70 border border-surface-700/50 rounded-xl text-xs font-medium text-surface-300 hover:text-surface-100 transition-colors flex items-center justify-center gap-1.5"
-        >
-          <span>⚡</span>
-          <span>Fill Demo Credentials (Roxie Velocity)</span>
-        </button>
-      </div>
+      {/* Demo Account Helper - gated in production unless explicitly enabled */}
+      {(process.env.NODE_ENV !== "production" ||
+        process.env.NEXT_PUBLIC_ENABLE_DEMO_LOGIN === "true") && (
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={handleFillDemo}
+            className="w-full py-2 px-3 bg-surface-800/40 hover:bg-surface-800/70 border border-surface-700/50 rounded-xl text-xs font-medium text-surface-300 hover:text-surface-100 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <span>⚡</span>
+            <span>Fill Demo Credentials (Roxie Velocity)</span>
+          </button>
+        </div>
+      )}
     </form>
   );
 };

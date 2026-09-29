@@ -18,6 +18,7 @@ import {
 import {
   createCharacterRecord,
   getCharacters,
+  updateCharacterRecord,
 } from "../lib/server/characters";
 import {
   createScriptRecord,
@@ -185,5 +186,56 @@ describe("Phase 7 - Authorization & Multi-Tenant Workspace Isolation", () => {
     // Compute analytics for Delta
     const deltaAnalytics = await getAnalyticsData(undefined, userDelta, wsDelta);
     assert.strictEqual(deltaAnalytics.summary.videoCount, 1, "Delta workspace should reflect its own videos");
+  });
+
+  it("Authz - 4. Bi-directional isolation (Beta cannot access Alpha, Alpha cannot access Beta)", async () => {
+    const ws1 = "workspace-bidir-1";
+    const user1 = "user-bidir-1";
+    const ws2 = "workspace-bidir-2";
+    const user2 = "user-bidir-2";
+
+    // 1 in ws1, 1 in ws2
+    const char1 = await createCharacterRecord({ name: "Knight of WS1", role: "MAIN" }, user1, ws1);
+    const char2 = await createCharacterRecord({ name: "Ranger of WS2", role: "SUPPORTING" }, user2, ws2);
+
+    // WS1 querying characters
+    const ws1Chars = await getCharacters(user1, ws1);
+    assert.ok(ws1Chars.some((c) => c.id === char1.id), "WS1 should see char1");
+    assert.ok(!ws1Chars.some((c) => c.id === char2.id), "WS1 must NOT see char2");
+
+    // WS2 querying characters
+    const ws2Chars = await getCharacters(user2, ws2);
+    assert.ok(ws2Chars.some((c) => c.id === char2.id), "WS2 should see char2");
+    assert.ok(!ws2Chars.some((c) => c.id === char1.id), "WS2 must NOT see char1");
+
+    // WS1 cannot mutate WS2 character
+    await assert.rejects(
+      async () => {
+        await updateCharacterRecord(char2.id, { name: "Renamed by WS1" }, user1, ws1);
+      },
+      /Character not found/
+    );
+
+    // WS2 cannot mutate WS1 character
+    await assert.rejects(
+      async () => {
+        await updateCharacterRecord(char1.id, { name: "Renamed by WS2" }, user2, ws2);
+      },
+      /Character not found/
+    );
+  });
+
+  it("Authz - 5. Content deletion permissions with author scoping", () => {
+    // OWNER can delete any content in their workspace
+    assert.strictEqual(canDeleteContent("OWNER", true), true);
+    assert.strictEqual(canDeleteContent("OWNER", false), true);
+
+    // ADMIN can delete any content in their workspace
+    assert.strictEqual(canDeleteContent("ADMIN", true), true);
+    assert.strictEqual(canDeleteContent("ADMIN", false), true);
+
+    // MEMBER can only delete their own authored content
+    assert.strictEqual(canDeleteContent("MEMBER", true), true);
+    assert.strictEqual(canDeleteContent("MEMBER", false), false);
   });
 });

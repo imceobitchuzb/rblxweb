@@ -1,7 +1,7 @@
 import { prisma } from "../prisma";
 import { Character, CharacterRole } from "../types";
 import { getCurrentUserId, getCurrentWorkspaceId } from "./user-context";
-import { memoryStore } from "./store";
+import { memoryStore, assertPersistentDatabase } from "./store";
 
 function mapPrismaCharacterToItem(char: {
   id: string;
@@ -51,13 +51,14 @@ export async function getCharacters(userId?: string, workspaceId?: string): Prom
       where: {
         OR: [
           { workspaceId: activeWorkspaceId },
-          { userId: activeUserId },
+          { workspaceId: null, userId: activeUserId },
         ],
       },
       orderBy: { createdAt: "asc" },
     });
     return chars.map(mapPrismaCharacterToItem);
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("getCharacters", err);
     return memoryStore.characters.filter((c) =>
       c.workspaceId ? c.workspaceId === activeWorkspaceId : c.userId === activeUserId
     );
@@ -78,12 +79,13 @@ export async function getCharacterById(
         id,
         OR: [
           { workspaceId: activeWorkspaceId },
-          { userId: activeUserId },
+          { workspaceId: null, userId: activeUserId },
         ],
       },
     });
     return char ? mapPrismaCharacterToItem(char) : null;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("getCharacterById", err);
     return (
       memoryStore.characters.find(
         (c) =>
@@ -140,7 +142,8 @@ export async function createCharacterRecord(
     const mapped = mapPrismaCharacterToItem(created);
     memoryStore.characters.push(mapped);
     return mapped;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("createCharacterRecord", err);
     const now = new Date().toISOString();
     const fallback: Character = {
       id: `char-${Date.now()}`,
@@ -173,8 +176,21 @@ export async function updateCharacterRecord(
   const activeWorkspaceId = workspaceId || (await getCurrentWorkspaceId());
 
   try {
+    const existing = await prisma.character.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      throw new Error(`Character not found: ${id}`);
+    }
+
     const updated = await prisma.character.update({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.role !== undefined ? { role: data.role as never } : {}),
@@ -194,7 +210,11 @@ export async function updateCharacterRecord(
     );
     if (idx !== -1) memoryStore.characters[idx] = mapped;
     return mapped;
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message.startsWith("Character not found")) {
+      throw err;
+    }
+    assertPersistentDatabase("updateCharacterRecord", err);
     const idx = memoryStore.characters.findIndex(
       (c) =>
         c.id === id &&
@@ -226,7 +246,7 @@ export async function checkCharacterScriptReferences(
         script: {
           OR: [
             { workspaceId: activeWorkspaceId },
-            { userId: activeUserId },
+            { workspaceId: null, userId: activeUserId },
           ],
         },
       },
@@ -235,7 +255,8 @@ export async function checkCharacterScriptReferences(
       },
     });
     return usages.map((u) => u.script.title);
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("checkCharacterScriptReferences", err);
     const referenced = memoryStore.scripts
       .filter(
         (s) =>
@@ -264,15 +285,29 @@ export async function deleteCharacterRecord(
   }
 
   try {
+    const existing = await prisma.character.findFirst({
+      where: {
+        id,
+        OR: [
+          { workspaceId: activeWorkspaceId },
+          { workspaceId: null, userId: activeUserId },
+        ],
+      },
+    });
+    if (!existing) {
+      return false;
+    }
+
     await prisma.character.delete({
-      where: { id, userId: activeUserId },
+      where: { id: existing.id },
     });
     memoryStore.characters = memoryStore.characters.filter(
       (c) =>
         !(c.id === id && (c.workspaceId ? c.workspaceId === activeWorkspaceId : c.userId === activeUserId))
     );
     return true;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("deleteCharacterRecord", err);
     const initialLen = memoryStore.characters.length;
     memoryStore.characters = memoryStore.characters.filter(
       (c) =>

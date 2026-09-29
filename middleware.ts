@@ -4,6 +4,17 @@ import { jwtVerify } from "jose/jwt/verify";
 
 const DEFAULT_SECRET = "roxie-hub-secure-auth-jwt-secret-token-32-bytes-minimum";
 
+function getMiddlewareSecret(): Uint8Array | null {
+  const secret = process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    if (!secret || secret.length < 32) {
+      return null;
+    }
+    return new TextEncoder().encode(secret);
+  }
+  return new TextEncoder().encode(secret || DEFAULT_SECRET);
+}
+
 const PROTECTED_ROUTES = [
   "/dashboard",
   "/ideas",
@@ -19,19 +30,26 @@ const AUTH_ROUTES = ["/login", "/register"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const normalizedPath = pathname.toLowerCase();
   const sessionCookie = request.cookies.get("roxie_session")?.value;
 
-  const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  const isProtectedRoute = PROTECTED_ROUTES.some(
+    (route) => normalizedPath === route || normalizedPath.startsWith(`${route}/`)
+  );
+  const isAuthRoute = AUTH_ROUTES.some(
+    (route) => normalizedPath === route || normalizedPath.startsWith(`${route}/`)
+  );
 
   let isAuthenticated = false;
 
   if (sessionCookie) {
     try {
-      const secret = new TextEncoder().encode(process.env.SESSION_SECRET || DEFAULT_SECRET);
-      const { payload } = await jwtVerify(sessionCookie, secret);
-      if (payload && payload.sub) {
-        isAuthenticated = true;
+      const secret = getMiddlewareSecret();
+      if (secret) {
+        const { payload } = await jwtVerify(sessionCookie, secret);
+        if (payload && payload.sub) {
+          isAuthenticated = true;
+        }
       }
     } catch {
       isAuthenticated = false;

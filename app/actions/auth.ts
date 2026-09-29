@@ -7,7 +7,7 @@ import { createSessionToken, setSessionCookie, clearSessionCookie } from "../../
 import { getAuthContext } from "../../lib/auth/context";
 import { validateLoginInput, validateRegisterInput } from "../../lib/server/validation";
 import { ActionResult, errorResult, successResult } from "../../lib/server/types";
-import { memoryStore } from "../../lib/server/store";
+import { memoryStore, assertPersistentDatabase } from "../../lib/server/store";
 import { AuthUser, Workspace, WorkspaceRole } from "../../lib/types";
 
 function safeRevalidate(path: string) {
@@ -124,8 +124,9 @@ export async function registerAction(data: {
 
       safeRevalidate("/");
       return successResult(response);
-    } catch {
-      // 2. Fallback to memory store registration when DB is unreachable
+    } catch (dbErr) {
+      assertPersistentDatabase("registerAction", dbErr);
+      // 2. Fallback to memory store registration when DB is unreachable (dev/test only)
       const existingMemUser = memoryStore.users.find((u) => u.email === email);
       if (existingMemUser) {
         return errorResult("An account with this email address already exists.");
@@ -292,8 +293,13 @@ export async function loginAction(data: {
         safeRevalidate("/");
         return successResult(response);
       }
-    } catch {
-      // Database not reachable, proceed to memory store check
+    } catch (dbErr) {
+      assertPersistentDatabase("loginAction", dbErr);
+      // Database not reachable, proceed to memory store check (dev/test only)
+    }
+
+    if (process.env.NODE_ENV === "production") {
+      return errorResult("Invalid email or password.");
     }
 
     // 2. Memory store login fallback

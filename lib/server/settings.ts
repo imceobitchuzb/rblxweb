@@ -1,6 +1,6 @@
 import { prisma } from "../prisma";
 import { getCurrentUserId } from "./user-context";
-import { memoryStore, UserSettingsRecord } from "./store";
+import { memoryStore, assertPersistentDatabase, UserSettingsRecord } from "./store";
 
 export async function getUserSettings(userId?: string): Promise<UserSettingsRecord> {
   const activeUserId = userId || (await getCurrentUserId());
@@ -21,8 +21,8 @@ export async function getUserSettings(userId?: string): Promise<UserSettingsReco
         connectedTiktok: settings.connectedTiktok,
       };
     }
-  } catch {
-    // fallback
+  } catch (err) {
+    assertPersistentDatabase("getUserSettings", err);
   }
 
   return (
@@ -79,7 +79,8 @@ export async function updateUserSettingsRecord(
     };
     memoryStore.settings[activeUserId] = res;
     return res;
-  } catch {
+  } catch (err) {
+    assertPersistentDatabase("updateUserSettingsRecord", err);
     const existing = memoryStore.settings[activeUserId] || {
       id: `settings-${activeUserId}`,
       userId: activeUserId,

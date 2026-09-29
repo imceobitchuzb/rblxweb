@@ -7,11 +7,22 @@ const SESSION_EXPIRATION = "7d";
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days in seconds
 
 const DEFAULT_SECRET = "roxie-hub-secure-auth-jwt-secret-token-32-bytes-minimum";
+export const MIN_SECRET_LENGTH = 32;
 
 function getSecretKey(): Uint8Array {
-  const secret = process.env.SESSION_SECRET || DEFAULT_SECRET;
-  return new TextEncoder().encode(secret);
+  const secret = process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    if (!secret || secret.length < MIN_SECRET_LENGTH) {
+      throw new Error(
+        `[SECURITY CRITICAL] SESSION_SECRET environment variable is missing or less than ${MIN_SECRET_LENGTH} characters in production. Aborting session token operation.`
+      );
+    }
+    return new TextEncoder().encode(secret);
+  }
+  return new TextEncoder().encode(secret || DEFAULT_SECRET);
 }
+
+export { getSafeCallbackUrl } from "./url";
 
 /**
  * Creates a signed JWT session token containing user and workspace context.

@@ -164,4 +164,124 @@ describe("Phase 7 - Authentication System", () => {
     const res = await logoutAction();
     assert.strictEqual(res.success, true);
   });
+
+  it("Auth - 8. Open-redirect defense via getSafeCallbackUrl", async () => {
+    const { getSafeCallbackUrl } = await import("../lib/auth/session");
+
+    assert.strictEqual(getSafeCallbackUrl("https://evil.com"), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl("http://evil.com/phishing"), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl("//evil.com"), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl("/\\evil.com"), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl("javascript:alert(1)"), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl("/javascript:alert(1)"), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl("data:text/html,evil"), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl(null), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl(undefined), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl(""), "/dashboard");
+
+    // Legitimate internal paths
+    assert.strictEqual(getSafeCallbackUrl("/dashboard"), "/dashboard");
+    assert.strictEqual(getSafeCallbackUrl("/ideas"), "/ideas");
+    assert.strictEqual(getSafeCallbackUrl("/videos?filter=YOUTUBE"), "/videos?filter=YOUTUBE");
+    assert.strictEqual(getSafeCallbackUrl("/characters#roster"), "/characters#roster");
+  });
+
+  it("Auth - 9. Tampered JWT signature rejection", async () => {
+    const token = await createSessionToken({
+      sub: "user-tamper-test",
+      email: "tamper@test.gg",
+      workspaceId: "ws-tamper",
+      role: "MEMBER",
+    });
+
+    const parts = token.split(".");
+    assert.strictEqual(parts.length, 3, "JWT must contain 3 parts");
+
+    // Alter signature
+    const tamperedSigToken = `${parts[0]}.${parts[1]}.badSignatureInvalid1234567890`;
+    const result1 = await verifySessionToken(tamperedSigToken);
+    assert.strictEqual(result1, null, "Tampered signature must be rejected");
+
+    // Alter payload
+    const tamperedPayloadToken = `${parts[0]}.eyJzdWIiOiJoYWNrZWQifQ.${parts[2]}`;
+    const result2 = await verifySessionToken(tamperedPayloadToken);
+    assert.strictEqual(result2, null, "Tampered payload must be rejected");
+  });
+
+  it("Auth - 10. Expired JWT token rejection", async () => {
+    const { SignJWT } = await import("jose");
+    const secret = new TextEncoder().encode(
+      "roxie-hub-secure-auth-jwt-secret-token-32-bytes-minimum"
+    );
+
+    const expiredToken = await new SignJWT({
+      email: "expired@test.gg",
+      workspaceId: "ws-expired",
+      role: "MEMBER",
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("user-expired")
+      .setIssuedAt(Math.floor(Date.now() / 1000) - 3600)
+      .setExpirationTime(Math.floor(Date.now() / 1000) - 60) // Expired 60s ago
+      .sign(secret);
+
+    const verified = await verifySessionToken(expiredToken);
+    assert.strictEqual(verified, null, "Expired JWT token must return null");
+  });
+
+  it("Auth - 11. Production persistence guard prevents silent memory fallback", async () => {
+    const { assertPersistentDatabase } = await import("../lib/server/store");
+    const prevEnv = process.env.NODE_ENV;
+
+    try {
+      (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+      assert.throws(
+        () => assertPersistentDatabase("createIdeaRecord", new Error("DB offline")),
+        /\[Production Persistence Failure\]/
+      );
+    } finally {
+      (process.env as Record<string, string | undefined>).NODE_ENV = prevEnv;
+    }
+  });
+
+  it("Auth - 12. Production SESSION_SECRET enforcement (minimum 32 characters)", async () => {
+    const prevEnv = process.env.NODE_ENV;
+    const prevSecret = process.env.SESSION_SECRET;
+
+    try {
+      (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+
+      // Missing secret in production
+      delete process.env.SESSION_SECRET;
+      await assert.rejects(
+        async () => {
+          await createSessionToken({
+            sub: "user-prod",
+            email: "prod@test.gg",
+            workspaceId: "ws-prod",
+            role: "OWNER",
+          });
+        },
+        /\[SECURITY CRITICAL\] SESSION_SECRET/
+      );
+
+      // Secret too short in production
+      process.env.SESSION_SECRET = "too-short-secret";
+      await assert.rejects(
+        async () => {
+          await createSessionToken({
+            sub: "user-prod",
+            email: "prod@test.gg",
+            workspaceId: "ws-prod",
+            role: "OWNER",
+          });
+        },
+        /\[SECURITY CRITICAL\] SESSION_SECRET/
+      );
+    } finally {
+      (process.env as Record<string, string | undefined>).NODE_ENV = prevEnv;
+      if (prevSecret !== undefined) process.env.SESSION_SECRET = prevSecret;
+      else delete process.env.SESSION_SECRET;
+    }
+  });
 });
