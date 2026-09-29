@@ -9,7 +9,10 @@ ROXIE HUB is a web application built specifically for Roblox video creators and 
 ## 🚀 Features & Modules
 
 - **Dashboard**: Unified overview of upload streaks, quick stats, content pipeline status, and immediate actions.
-- **Ideas Hub**: Idea incubator with categorized tags (`MM2`, `Funny`, `Story`, `Trend`, `Short`, `Long Video`) and Kanban status workflow (`IDEA` → `PLANNING` → `SCRIPTING` → `PRODUCTION` → `PUBLISHED`).
+- **Ideas Studio**: Comprehensive idea incubator for Roblox creators featuring multi-filter search, priority ratings, potential viral score gauges, Grid & Kanban views, idea creation/editing dialogs, and linear status pipeline transitions.
+  - **Categories**: `MM2`, `Funny`, `Story`, `Trend`, `Short`, `Long Video`, `Other`
+  - **Statuses**: `IDEA` → `PLANNING` → `SCRIPTING` → `PRODUCTION` → `PUBLISHED` → `ARCHIVED`
+  - **Priorities**: `LOW`, `MEDIUM`, `HIGH`, `HOT 🔥`
 - **Videos Module**: Multi-platform video asset tracking (YouTube, Shorts, TikTok, Roblox Experiences) with view, like, comment, and duration metrics.
 - **Script Studio**: Structured scene-by-scene script editor with hook engineering, dialogue lines, character assignments, and runtime estimation.
 - **Character Roster**: Roblox avatar library storing characters, roles (`MAIN`, `SUPPORTING`, `VILLAIN`, `NPC`, `SPECIAL GUEST`), personalities, and tags.
@@ -129,8 +132,16 @@ npm run build
   - Placeholder route scaffolding for all 8 modules
   - Core UI primitives (`Button`, `Card`, `Badge`, `Input`, `EmptyState`)
   - Prisma schema architecture & unit tests
-- [ ] **Phase 2: Ideas Module & Local State**
-  - Interactive idea creation modal, category filter tabs, Kanban / list status toggling
+- [x] **Phase 2: Ideas Studio & Local Data Layer**
+  - 18 realistic Roblox content ideas (Murder Mystery 2, skits, challenges, trends)
+  - Interactive Ideas Studio with real-time multi-filter search (title, description, tags)
+  - Category filters (`MM2`, `Funny`, `Story`, `Trend`, `Short`, `Long Video`, `Other`)
+  - Status filters (`IDEA`, `PLANNING`, `SCRIPTING`, `PRODUCTION`, `PUBLISHED`, `ARCHIVED`)
+  - Priority levels with neon glowing emphasis for `HOT 🔥`
+  - Dynamic summary metrics (Total, Hot, Planning, Production, Published)
+  - Grid View and Kanban Board with quick status progression
+  - Modals for Idea creation, editing, deletion confirmation, and detailed inspection
+  - 16 comprehensive unit tests covering filtering, validation, and CRUD operations
 - [ ] **Phase 3: Character Roster & Script Studio**
   - Character creation cards, scene builder, dialogue block editor, runtime calculation
 - [ ] **Phase 4: Content Calendar & Video Management**
@@ -138,4 +149,6 @@ npm run build
 - [ ] **Phase 5: Analytics Dashboard & Creator Profile**
   - Key performance indicators, interactive charts, engagement breakdowns
 - [ ] **Phase 6: Persistence & External Integrations**
-  - PostgreSQL live connection via Prisma, YouTube Data API v3, TikTok Creator API, AI assistant
+  - PostgreSQL live connection via Prisma (seamlessly swapping the `lib/mock-ideas.ts` local state with server actions / API routes without UI rewrites)
+  - YouTube Data API v3 and TikTok Creator API sync
+  - AI script and hook assistant
