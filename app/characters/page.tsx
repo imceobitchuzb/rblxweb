@@ -22,6 +22,13 @@ import { CharacterCard } from "@/components/characters/CharacterCard";
 import { CharacterModal } from "@/components/characters/CharacterModal";
 import { CharacterDetailsModal } from "@/components/characters/CharacterDetailsModal";
 import { DeleteCharacterDialog } from "@/components/characters/DeleteCharacterDialog";
+import {
+  createCharacterAction,
+  deleteCharacterAction,
+  fetchCharactersAction,
+  updateCharacterAction,
+} from "@/app/actions/characters";
+import { fetchScriptsAction } from "@/app/actions/scripts";
 import { cn } from "@/lib/utils";
 
 export default function CharactersPage() {
@@ -30,7 +37,27 @@ export default function CharactersPage() {
   // Characters state
   const [characters, setCharacters] = React.useState<Character[]>(INITIAL_CHARACTERS);
   // Shared scripts state for cross-module linking
-  const [scripts] = React.useState<Script[]>(INITIAL_SCRIPTS);
+  const [scripts, setScripts] = React.useState<Script[]>(INITIAL_SCRIPTS);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+
+  // Load characters and scripts on mount
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const [charRes, scriptRes] = await Promise.all([
+        fetchCharactersAction(),
+        fetchScriptsAction(),
+      ]);
+      if (mounted) {
+        if (charRes.success) setCharacters(charRes.data);
+        if (scriptRes.success) setScripts(scriptRes.data);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -58,48 +85,45 @@ export default function CharactersPage() {
   };
 
   // CRUD Handlers
-  const handleSaveCharacter = (
+  const handleSaveCharacter = async (
     charData: Omit<Character, "id" | "createdAt" | "updatedAt"> & { id?: string }
   ) => {
-    const timestamp = new Date().toISOString();
-
+    setActionError(null);
     if (charData.id) {
       // Edit
-      setCharacters((prev) =>
-        prev.map((item) =>
-          item.id === charData.id
-            ? {
-                ...item,
-                ...charData,
-                id: item.id,
-                updatedAt: timestamp,
-              }
-            : item
-        )
-      );
-
-      if (inspectingCharacter?.id === charData.id) {
-        setInspectingCharacter((prev) =>
-          prev ? { ...prev, ...charData, updatedAt: timestamp } : null
+      const res = await updateCharacterAction(charData.id, charData);
+      if (res.success) {
+        setCharacters((prev) =>
+          prev.map((item) => (item.id === charData.id ? res.data : item))
         );
+        if (inspectingCharacter?.id === charData.id) {
+          setInspectingCharacter(res.data);
+        }
+      } else {
+        setActionError(res.error);
       }
     } else {
       // Create
-      const newChar: Character = {
-        ...charData,
-        id: `char-${Date.now()}`,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      };
-      setCharacters((prev) => [newChar, ...prev]);
+      const res = await createCharacterAction(charData as never);
+      if (res.success) {
+        setCharacters((prev) => [res.data, ...prev]);
+      } else {
+        setActionError(res.error);
+      }
     }
     setEditingCharacter(null);
   };
 
-  const handleDeleteCharacter = (character: Character) => {
-    setCharacters((prev) => prev.filter((item) => item.id !== character.id));
-    if (inspectingCharacter?.id === character.id) {
-      setInspectingCharacter(null);
+  const handleDeleteCharacter = async (character: Character) => {
+    setActionError(null);
+    const res = await deleteCharacterAction(character.id);
+    if (res.success) {
+      setCharacters((prev) => prev.filter((item) => item.id !== character.id));
+      if (inspectingCharacter?.id === character.id) {
+        setInspectingCharacter(null);
+      }
+    } else {
+      setActionError(res.error);
     }
   };
 
@@ -136,6 +160,18 @@ export default function CharactersPage() {
           <span>New Character</span>
         </Button>
       </div>
+
+      {actionError && (
+        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-xs flex items-center justify-between">
+          <span>{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            className="text-red-400/80 hover:text-red-300 font-bold ml-2"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Search and Filters Bar */}
       <div className="glass-panel p-4 rounded-2xl border border-white/[0.06] space-y-3">

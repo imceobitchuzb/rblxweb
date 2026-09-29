@@ -50,6 +50,16 @@ import { VideoDetailsModal } from "@/components/videos/VideoDetailsModal";
 import { ScheduleVideoModal } from "@/components/videos/ScheduleVideoModal";
 import { DeleteVideoDialog } from "@/components/videos/DeleteVideoDialog";
 import { cn } from "@/lib/utils";
+import {
+  createVideoAction,
+  deleteVideoAction,
+  fetchVideosAction,
+  updateVideoAction,
+} from "@/app/actions/videos";
+import { createCalendarEventAction } from "@/app/actions/calendar";
+import { fetchCharactersAction } from "@/app/actions/characters";
+import { fetchScriptsAction } from "@/app/actions/scripts";
+import { fetchIdeasAction } from "@/app/actions/ideas";
 
 function VideosContent() {
   const searchParams = useSearchParams();
@@ -57,9 +67,32 @@ function VideosContent() {
 
   // State
   const [videos, setVideos] = React.useState<Video[]>(INITIAL_VIDEOS);
-  const [characters] = React.useState<Character[]>(INITIAL_CHARACTERS);
-  const [scripts] = React.useState<Script[]>(INITIAL_SCRIPTS);
-  const [ideas] = React.useState<IdeaItem[]>(INITIAL_IDEAS);
+  const [characters, setCharacters] = React.useState<Character[]>(INITIAL_CHARACTERS);
+  const [scripts, setScripts] = React.useState<Script[]>(INITIAL_SCRIPTS);
+  const [ideas, setIdeas] = React.useState<IdeaItem[]>(INITIAL_IDEAS);
+
+  // Load from database on mount
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const [vidRes, charRes, scriptRes, ideaRes] = await Promise.all([
+        fetchVideosAction(),
+        fetchCharactersAction(),
+        fetchScriptsAction(),
+        fetchIdeasAction(),
+      ]);
+      if (mounted) {
+        if (vidRes.success) setVideos(vidRes.data);
+        if (charRes.success) setCharacters(charRes.data);
+        if (scriptRes.success) setScripts(scriptRes.data);
+        if (ideaRes.success) setIdeas(ideaRes.data);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Filters & Sorting
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -125,23 +158,21 @@ function VideosContent() {
   );
 
   // Handlers
-  const handleSaveVideo = (videoData: Partial<Video>) => {
+  const handleSaveVideo = async (videoData: Partial<Video>) => {
     if (videoData.id) {
       // Update existing video
-      setVideos((prev) =>
-        prev.map((v) =>
-          v.id === videoData.id
-            ? { ...v, ...(videoData as Video), updatedAt: new Date().toISOString() }
-            : v
-        )
-      );
-      if (detailsVideo && detailsVideo.id === videoData.id) {
-        setDetailsVideo((prev) => (prev ? { ...prev, ...(videoData as Video) } : null));
+      const res = await updateVideoAction(videoData.id, videoData);
+      if (res.success) {
+        setVideos((prev) =>
+          prev.map((v) => (v.id === videoData.id ? res.data : v))
+        );
+        if (detailsVideo && detailsVideo.id === videoData.id) {
+          setDetailsVideo(res.data);
+        }
       }
     } else {
       // Create new video
-      const newVideo: Video = {
-        id: `vid-${Date.now()}`,
+      const res = await createVideoAction({
         title: videoData.title || "Untitled Video",
         description: videoData.description || "",
         platform: videoData.platform || "YOUTUBE_SHORTS",
@@ -154,19 +185,28 @@ function VideosContent() {
         ideaId: videoData.ideaId,
         characterIds: videoData.characterIds || [],
         tags: videoData.tags || [],
-        views: videoData.views || 0,
-        likes: videoData.likes || 0,
-        comments: videoData.comments || 0,
         scheduledAt: videoData.scheduledAt,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setVideos((prev) => [newVideo, ...prev]);
+      });
+      if (res.success) {
+        setVideos((prev) => [res.data, ...prev]);
+      }
     }
     setPrefilledVideo(null);
   };
 
-  const handleConfirmSchedule = (updatedVideo: Video, calendarEvent: CalendarEvent) => {
+  const handleConfirmSchedule = async (updatedVideo: Video, calendarEvent: CalendarEvent) => {
+    await Promise.all([
+      updateVideoAction(updatedVideo.id, updatedVideo),
+      createCalendarEventAction({
+        title: calendarEvent.title,
+        scheduledAt: calendarEvent.scheduledAt,
+        type: calendarEvent.type,
+        platform: calendarEvent.platform,
+        status: calendarEvent.status,
+        videoId: updatedVideo.id,
+        notes: calendarEvent.notes,
+      }),
+    ]);
     setVideos((prev) =>
       prev.map((v) => (v.id === updatedVideo.id ? updatedVideo : v))
     );
@@ -175,7 +215,8 @@ function VideosContent() {
     }
   };
 
-  const handleDeleteVideo = (video: Video) => {
+  const handleDeleteVideo = async (video: Video) => {
+    await deleteVideoAction(video.id);
     setVideos((prev) => prev.filter((v) => v.id !== video.id));
     if (detailsVideo && detailsVideo.id === video.id) {
       setDetailsVideo(null);

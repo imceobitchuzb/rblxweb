@@ -46,12 +46,39 @@ import {
   getUpcomingEvents,
 } from "@/lib/video-calendar-utils";
 import { cn } from "@/lib/utils";
+import { fetchVideosAction } from "@/app/actions/videos";
+import { fetchCalendarEventsAction } from "@/app/actions/calendar";
+import { fetchScriptsAction } from "@/app/actions/scripts";
+import { fetchIdeasAction } from "@/app/actions/ideas";
 
 export default function DashboardPage() {
-  const [videos] = React.useState(INITIAL_VIDEOS);
-  const [events] = React.useState(INITIAL_CALENDAR_EVENTS);
-  const [scripts] = React.useState(INITIAL_SCRIPTS);
-  const [ideas] = React.useState(INITIAL_IDEAS);
+  const [videos, setVideos] = React.useState(INITIAL_VIDEOS);
+  const [events, setEvents] = React.useState(INITIAL_CALENDAR_EVENTS);
+  const [scripts, setScripts] = React.useState(INITIAL_SCRIPTS);
+  const [ideas, setIdeas] = React.useState(INITIAL_IDEAS);
+
+  // Load from persistent storage on mount
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const [vidRes, calRes, scriptRes, ideaRes] = await Promise.all([
+        fetchVideosAction(),
+        fetchCalendarEventsAction(),
+        fetchScriptsAction(),
+        fetchIdeasAction(),
+      ]);
+      if (mounted) {
+        if (vidRes.success) setVideos(vidRes.data);
+        if (calRes.success) setEvents(calRes.data);
+        if (scriptRes.success) setScripts(scriptRes.data);
+        if (ideaRes.success) setIdeas(ideaRes.data);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Workflow pipeline counts
   const ideasCount = ideas.length;

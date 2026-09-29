@@ -47,6 +47,13 @@ import { UpcomingContentPanel } from "@/components/calendar/UpcomingContentPanel
 import { CalendarEventModal } from "@/components/calendar/CalendarEventModal";
 import { VideoDetailsModal } from "@/components/videos/VideoDetailsModal";
 import { cn } from "@/lib/utils";
+import {
+  createCalendarEventAction,
+  deleteCalendarEventAction,
+  fetchCalendarEventsAction,
+  updateCalendarEventAction,
+} from "@/app/actions/calendar";
+import { fetchVideosAction } from "@/app/actions/videos";
 
 const MONTH_NAMES = [
   "January",
@@ -72,6 +79,25 @@ function CalendarContent() {
   // State
   const [events, setEvents] = React.useState<CalendarEvent[]>(INITIAL_CALENDAR_EVENTS);
   const [videos, setVideos] = React.useState<Video[]>(INITIAL_VIDEOS);
+
+  // Load from persistent storage on mount
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const [calRes, vidRes] = await Promise.all([
+        fetchCalendarEventsAction(),
+        fetchVideosAction(),
+      ]);
+      if (mounted) {
+        if (calRes.success) setEvents(calRes.data);
+        if (vidRes.success) setVideos(vidRes.data);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Calendar timeline navigation state
   const [viewMode, setViewMode] = React.useState<"month" | "week">("month");
@@ -163,33 +189,32 @@ function CalendarContent() {
     setIsModalOpen(true);
   };
 
-  const handleSaveEvent = (eventData: Partial<CalendarEvent>) => {
+  const handleSaveEvent = async (eventData: Partial<CalendarEvent>) => {
     if (eventData.id) {
-      setEvents((prev) =>
-        prev.map((e) =>
-          e.id === eventData.id
-            ? { ...e, ...(eventData as CalendarEvent), updatedAt: new Date().toISOString() }
-            : e
-        )
-      );
+      const res = await updateCalendarEventAction(eventData.id, eventData);
+      if (res.success) {
+        setEvents((prev) =>
+          prev.map((e) => (e.id === eventData.id ? res.data : e))
+        );
+      }
     } else {
-      const newEvent: CalendarEvent = {
-        id: `cal-${Date.now()}`,
+      const res = await createCalendarEventAction({
         title: eventData.title || "Untitled Slot",
+        scheduledAt: eventData.scheduledAt || new Date().toISOString(),
         type: eventData.type || "VIDEO",
         platform: eventData.platform || "YOUTUBE_SHORTS",
         status: eventData.status || "PLANNED",
-        scheduledAt: eventData.scheduledAt || new Date().toISOString(),
         videoId: eventData.videoId,
         notes: eventData.notes,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setEvents((prev) => [...prev, newEvent]);
+      });
+      if (res.success) {
+        setEvents((prev) => [...prev, res.data]);
+      }
     }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
+  const handleDeleteEvent = async (eventId: string) => {
+    await deleteCalendarEventAction(eventId);
     setEvents((prev) => prev.filter((e) => e.id !== eventId));
   };
 

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0] - Phase 6: Full-Stack Persistence, Prisma ORM, PostgreSQL Schema & Server Actions
+
+### Added
+- **Production PostgreSQL Prisma Schema (`prisma/schema.prisma`)**:
+  - Full relational architecture: `User`, `Idea`, `Character`, `Script`, `ScriptCharacter`, `Scene`, `DialogueLine`, `Video`, `VideoCharacter`, `CalendarEvent`, and `UserSettings`.
+  - Cascading deletes (`onDelete: Cascade`) for Script -> Scenes -> DialogueLines to eliminate orphaned records.
+  - Relational dependency protection (`onDelete: Restrict`) on Characters to prevent deleting avatars referenced in active screenplays.
+  - Strategic indexing on `userId`, `status`, `category`, `platform`, `publishedAt`, and `scheduledAt`.
+- **Server Data Access Layer (`lib/server/`)**:
+  - Modular data access services: `ideas.ts`, `characters.ts`, `scripts.ts`, `videos.ts`, `calendar.ts`, `analytics.ts`, `settings.ts`.
+  - Comprehensive input validation layer (`lib/server/validation.ts`) ensuring runtime integrity before database writes.
+  - Resilient development fallback store (`lib/server/store.ts`) providing zero-downtime offline execution.
+  - User context abstraction (`lib/server/user-context.ts`) scoping all operations by `userId` (prepares for Phase 7 authentication).
+- **Next.js Server Actions Layer (`app/actions/`)**:
+  - `"use server"` CRUD action endpoints for Ideas, Characters, Scripts, Scenes, Dialogue, Videos, Calendar Events, and Settings.
+  - Automated cache revalidation (`revalidatePath()`) refreshing `/ideas`, `/characters`, `/scripts`, `/videos`, `/calendar`, `/analytics`, `/dashboard`, and `/settings`.
+- **Automated Database Seeder (`prisma/seed.ts`)**:
+  - Seeds a complete production workspace with demo creator `Roxie Velocity`, 18 ideas, 10 characters, 5 scripts, multiple scenes & dialogue lines, 14 multi-platform videos, and 10 calendar drops.
+  - Configured with `npx prisma db seed`.
+- **Database & Persistence Test Suite (`tests/database.test.ts`)**:
+  - 11 unit tests covering server-side validation, full CRUD lifecycles, screenplay hierarchy cascades, character dependency protection, calendar updates, and persisted analytics consumption (total 77 tests passing).
+
+---
+
 ## [0.6.0] - Phase 5.5: UX Shell, Command Palette, Notification Center, Landing Page & Documentation Polish
 
 ### Added

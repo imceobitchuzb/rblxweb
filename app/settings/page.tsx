@@ -23,6 +23,11 @@ import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { cn } from "@/lib/utils";
 
+import {
+  fetchUserSettingsAction,
+  updateUserSettingsAction,
+} from "@/app/actions/settings";
+
 type SettingsTab = "profile" | "appearance" | "preferences" | "notifications" | "platforms";
 
 export default function SettingsPage() {
@@ -48,8 +53,27 @@ export default function SettingsPage() {
   // Saved Feedback
   const [isSaved, setIsSaved] = React.useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const res = await fetchUserSettingsAction();
+      if (mounted && res.success) {
+        setNotifyDeadlines(res.data.emailNotifications);
+        setNotifyReadyScripts(res.data.browserNotifications);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    await updateUserSettingsAction({
+      emailNotifications: notifyDeadlines,
+      browserNotifications: notifyReadyScripts,
+    });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
   };

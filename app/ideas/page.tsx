@@ -33,9 +33,39 @@ import { IdeaDetailsModal } from "@/components/ideas/IdeaDetailsModal";
 import { DeleteIdeaDialog } from "@/components/ideas/DeleteIdeaDialog";
 import { cn } from "@/lib/utils";
 
+import {
+  advanceIdeaStatusAction,
+  createIdeaAction,
+  deleteIdeaAction,
+  fetchIdeasAction,
+  updateIdeaAction,
+} from "@/app/actions/ideas";
+import { Skeleton } from "@/components/ui/Skeleton";
+
 export default function IdeasStudioPage() {
   // State for all ideas in workspace
   const [ideas, setIdeas] = React.useState<IdeaItem[]>(INITIAL_IDEAS);
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  // Load from persistent database on mount
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      setIsLoading(true);
+      try {
+        const res = await fetchIdeasAction();
+        if (mounted && res.success) {
+          setIdeas(res.data);
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Search & filter state
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -81,82 +111,49 @@ export default function IdeasStudioPage() {
   };
 
   // CRUD Handlers
-  const handleSaveIdea = (
+  const handleSaveIdea = async (
     ideaData: Omit<IdeaItem, "id" | "createdAt" | "updatedAt"> & { id?: string }
   ) => {
-    const timestamp = new Date().toISOString();
-
     if (ideaData.id) {
       // Edit existing idea
-      setIdeas((prev) =>
-        prev.map((item) =>
-          item.id === ideaData.id
-            ? {
-                ...item,
-                ...ideaData,
-                id: item.id,
-                updatedAt: timestamp,
-              }
-            : item
-        )
-      );
-
-      // Also update inspecting idea if currently opened
-      if (inspectingIdea && inspectingIdea.id === ideaData.id) {
-        setInspectingIdea((prev) =>
-          prev
-            ? {
-                ...prev,
-                ...ideaData,
-                updatedAt: timestamp,
-              }
-            : null
+      const res = await updateIdeaAction(ideaData.id, ideaData);
+      if (res.success) {
+        setIdeas((prev) =>
+          prev.map((item) => (item.id === ideaData.id ? res.data : item))
         );
+        if (inspectingIdea && inspectingIdea.id === ideaData.id) {
+          setInspectingIdea(res.data);
+        }
       }
     } else {
       // Create new idea
-      const newIdea: IdeaItem = {
-        ...ideaData,
-        id: `idea-${Date.now()}`,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      };
-      setIdeas((prev) => [newIdea, ...prev]);
+      const res = await createIdeaAction(ideaData);
+      if (res.success) {
+        setIdeas((prev) => [res.data, ...prev]);
+      }
     }
     setEditingIdea(null);
   };
 
-  const handleDeleteIdea = (idea: IdeaItem) => {
-    setIdeas((prev) => prev.filter((item) => item.id !== idea.id));
-    if (inspectingIdea?.id === idea.id) {
-      setInspectingIdea(null);
+  const handleDeleteIdea = async (idea: IdeaItem) => {
+    const res = await deleteIdeaAction(idea.id);
+    if (res.success) {
+      setIdeas((prev) => prev.filter((item) => item.id !== idea.id));
+      if (inspectingIdea?.id === idea.id) {
+        setInspectingIdea(null);
+      }
     }
   };
 
-  const handleAdvanceStatus = (idea: IdeaItem, nextStatus: IdeaStatus) => {
-    const timestamp = new Date().toISOString();
-    setIdeas((prev) =>
-      prev.map((item) =>
-        item.id === idea.id
-          ? {
-              ...item,
-              status: nextStatus,
-              updatedAt: timestamp,
-            }
-          : item
-      )
-    );
-
-    if (inspectingIdea?.id === idea.id) {
-      setInspectingIdea((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: nextStatus,
-              updatedAt: timestamp,
-            }
-          : null
+  const handleAdvanceStatus = async (idea: IdeaItem, nextStatus: IdeaStatus) => {
+    const res = await updateIdeaAction(idea.id, { status: nextStatus });
+    if (res.success) {
+      setIdeas((prev) =>
+        prev.map((item) => (item.id === idea.id ? res.data : item))
       );
+      if (inspectingIdea?.id === idea.id) {
+        setInspectingIdea(res.data);
+      }
     }
   };
 

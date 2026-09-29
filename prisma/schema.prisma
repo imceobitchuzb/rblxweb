@@ -29,15 +29,26 @@ enum IdeaCategory {
   OTHER
 }
 
+enum IdeaPriority {
+  LOW
+  MEDIUM
+  HIGH
+  HOT
+}
+
 enum VideoPlatform {
   YOUTUBE
   YOUTUBE_SHORTS
   TIKTOK
+  INSTAGRAM_REELS
   ROBLOX_EXPERIENCE
 }
 
 enum VideoStatus {
-  DRAFT
+  PLANNING
+  IN_PRODUCTION
+  EDITING
+  READY
   SCHEDULED
   PUBLISHED
   ARCHIVED
@@ -51,111 +62,131 @@ enum CharacterRole {
   SPECIAL_GUEST
 }
 
-model User {
-  id            String      @id @default(cuid())
-  email         String      @unique
-  name          String?
-  creatorTag    String?     @unique
-  avatarUrl     String?
-  bio           String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+enum ScriptStatus {
+  DRAFT
+  SCRIPTING
+  READY
+  IN_PRODUCTION
+  COMPLETED
+  ARCHIVED
+}
 
-  ideas         Idea[]
-  videos        Video[]
-  scripts       Script[]
-  characters    Character[]
+enum DialogueEmotion {
+  NEUTRAL
+  HAPPY
+  ANGRY
+  SCARED
+  CONFUSED
+  SUSPICIOUS
+  EXCITED
+  SURPRISED
+}
+
+enum CalendarEventType {
+  VIDEO
+  UPLOAD
+  PREMIERE
+  IDEA
+  DEADLINE
+}
+
+enum CalendarEventStatus {
+  PLANNED
+  READY
+  PUBLISHED
+  CANCELLED
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String?
+  creatorTag     String?         @unique
+  avatarUrl      String?
+  bio            String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  ideas          Idea[]
+  videos         Video[]
+  scripts        Script[]
+  characters     Character[]
   calendarEvents CalendarEvent[]
-  settings      UserSettings?
+  settings       UserSettings?
 }
 
 model Idea {
-  id          String        @id @default(cuid())
-  userId      String
-  title       String
-  description String?
-  category    IdeaCategory  @default(OTHER)
-  status      IdeaStatus    @default(IDEA)
-  tags        String[]
-  estimatedViews Int?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  userId         String
+  title          String
+  description    String        @default("")
+  category       IdeaCategory  @default(OTHER)
+  status         IdeaStatus    @default(IDEA)
+  priority       IdeaPriority  @default(MEDIUM)
+  tags           String[]
+  potentialScore Int           @default(5) // 1 to 10
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scripts     Script[]
-  videos      Video[]
-}
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scripts        Script[]
+  videos         Video[]
 
-model Video {
-  id              String        @id @default(cuid())
-  userId          String
-  ideaId          String?
-  title           String
-  description     String?
-  thumbnail       String?
-  platform        VideoPlatform @default(YOUTUBE)
-  status          VideoStatus   @default(DRAFT)
-  views           Int           @default(0)
-  likes           Int           @default(0)
-  comments        Int           @default(0)
-  durationSeconds Int           @default(0)
-  publicationDate DateTime?
-  tags            String[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  idea            Idea?         @relation(fields: [ideaId], references: [id], onDelete: SetNull)
-  calendarEvents  CalendarEvent[]
-}
-
-model Script {
-  id                String       @id @default(cuid())
-  userId            String
-  ideaId            String?
-  title             String
-  hook              String?
-  estimatedDuration Int          @default(0) // seconds
-  notes             String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-
-  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  idea              Idea?        @relation(fields: [ideaId], references: [id], onDelete: SetNull)
-  scenes            Scene[]
-  characters        ScriptCharacter[]
-}
-
-model Scene {
-  id          String    @id @default(cuid())
-  scriptId    String
-  orderIndex  Int
-  title       String
-  duration    Int       @default(0) // seconds
-  description String?
-  dialogue    String?
-  characters  String[]  // character IDs or names
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  script      Script    @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([createdAt])
 }
 
 model Character {
-  id          String         @id @default(cuid())
-  userId      String
-  name        String
-  avatarUrl   String?
-  role        CharacterRole  @default(MAIN)
-  description String?
-  personality String?
-  notes       String?
-  tags        String[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id               String            @id @default(cuid())
+  userId           String
+  name             String
+  role             CharacterRole     @default(MAIN)
+  description      String            @default("")
+  personality      String            @default("")
+  outfit           String            @default("")
+  avatar           String?
+  avatarUrl        String?
+  notes            String            @default("")
+  tags             String[]
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  scripts     ScriptCharacter[]
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dialogueLines    DialogueLine[]
+  scriptCharacters ScriptCharacter[]
+  videoCharacters  VideoCharacter[]
+
+  @@index([userId])
+  @@index([role])
+  @@index([name])
+}
+
+model Script {
+  id                String            @id @default(cuid())
+  userId            String
+  ideaId            String?
+  title             String
+  description       String            @default("")
+  status            ScriptStatus      @default(DRAFT)
+  hook              String            @default("")
+  tags              String[]
+  estimatedDuration Int               @default(0) // seconds
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea              Idea?             @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+  scenes            Scene[]
+  characters        ScriptCharacter[]
+  videos            Video[]
+
+  @@index([userId])
+  @@index([ideaId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model ScriptCharacter {
@@ -163,38 +194,130 @@ model ScriptCharacter {
   characterId String
 
   script      Script    @relation(fields: [scriptId], references: [id], onDelete: Cascade)
-  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
 
   @@id([scriptId, characterId])
+  @@index([characterId])
+}
+
+model Scene {
+  id          String         @id @default(cuid())
+  scriptId    String
+  orderIndex  Int            @default(0)
+  title       String
+  description String         @default("")
+  duration    Int            @default(0) // seconds
+  notes       String         @default("")
+  characters  String[]       // character IDs for quick display
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  script      Script         @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  dialogue    DialogueLine[]
+
+  @@index([scriptId])
+  @@index([orderIndex])
+}
+
+model DialogueLine {
+  id          String          @id @default(cuid())
+  sceneId     String
+  characterId String
+  text        String
+  emotion     DialogueEmotion @default(NEUTRAL)
+  duration    Float           @default(3.0) // in seconds, supports decimal fractions
+  orderIndex  Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  scene       Scene           @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  character   Character       @relation(fields: [characterId], references: [id], onDelete: Restrict)
+
+  @@index([sceneId])
+  @@index([characterId])
+  @@index([orderIndex])
+}
+
+model Video {
+  id              String           @id @default(cuid())
+  userId          String
+  ideaId          String?
+  scriptId        String?
+  title           String
+  description     String           @default("")
+  thumbnail       String           @default("")
+  platform        VideoPlatform    @default(YOUTUBE)
+  status          VideoStatus      @default(PLANNING)
+  duration        Int              @default(0) // in seconds
+  views           Int              @default(0)
+  likes           Int              @default(0)
+  comments        Int              @default(0)
+  url             String?
+  tags            String[]
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea            Idea?            @relation(fields: [ideaId], references: [id], onDelete: SetNull)
+  script          Script?          @relation(fields: [scriptId], references: [id], onDelete: SetNull)
+  characters      VideoCharacter[]
+  calendarEvents  CalendarEvent[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([platform])
+  @@index([ideaId])
+  @@index([scriptId])
+  @@index([publishedAt])
+  @@index([scheduledAt])
+}
+
+model VideoCharacter {
+  videoId     String
+  characterId String
+
+  video       Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Restrict)
+
+  @@id([videoId, characterId])
+  @@index([characterId])
 }
 
 model CalendarEvent {
-  id            String        @id @default(cuid())
+  id            String              @id @default(cuid())
   userId        String
   videoId       String?
   title         String
-  scheduledDate DateTime
-  platform      VideoPlatform @default(YOUTUBE)
-  status        VideoStatus   @default(SCHEDULED)
+  type          CalendarEventType   @default(VIDEO)
+  platform      VideoPlatform       @default(YOUTUBE)
+  status        CalendarEventStatus @default(PLANNED)
+  scheduledAt   DateTime
   notes         String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video         Video?        @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video         Video?              @relation(fields: [videoId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([videoId])
 }
 
 model UserSettings {
-  id                  String   @id @default(cuid())
-  userId              String   @unique
-  theme               String   @default("dark")
-  emailNotifications  Boolean  @default(true)
-  browserNotifications Boolean @default(true)
-  defaultPlatform     VideoPlatform @default(YOUTUBE)
-  connectedYoutube    Boolean  @default(false)
-  connectedTiktok     Boolean  @default(false)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                   String        @id @default(cuid())
+  userId               String        @unique
+  theme                String        @default("dark")
+  emailNotifications   Boolean       @default(true)
+  browserNotifications Boolean       @default(true)
+  defaultPlatform      VideoPlatform @default(YOUTUBE)
+  connectedYoutube     Boolean       @default(false)
+  connectedTiktok      Boolean       @default(false)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
-  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

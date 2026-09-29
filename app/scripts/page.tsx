@@ -30,6 +30,14 @@ import { CreateScriptModal } from "@/components/scripts/CreateScriptModal";
 import { ScriptEditor } from "@/components/scripts/ScriptEditor";
 import { DeleteScriptDialog } from "@/components/scripts/DeleteScriptDialog";
 import { cn } from "@/lib/utils";
+import {
+  createScriptAction,
+  deleteScriptAction,
+  fetchScriptsAction,
+  updateScriptAction,
+} from "@/app/actions/scripts";
+import { fetchCharactersAction } from "@/app/actions/characters";
+import { fetchIdeasAction } from "@/app/actions/ideas";
 
 function ScriptsContent() {
   const searchParams = useSearchParams();
@@ -37,11 +45,32 @@ function ScriptsContent() {
 
   // State
   const [scripts, setScripts] = React.useState<Script[]>(INITIAL_SCRIPTS);
-  const [characters] = React.useState<Character[]>(INITIAL_CHARACTERS);
-  const [ideas] = React.useState<IdeaItem[]>(INITIAL_IDEAS);
+  const [characters, setCharacters] = React.useState<Character[]>(INITIAL_CHARACTERS);
+  const [ideas, setIdeas] = React.useState<IdeaItem[]>(INITIAL_IDEAS);
 
   // Active script in editor (if null, display library view)
   const [activeScriptId, setActiveScriptId] = React.useState<string | null>(null);
+
+  // Load from persistent storage on mount
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const [scriptRes, charRes, ideaRes] = await Promise.all([
+        fetchScriptsAction(),
+        fetchCharactersAction(),
+        fetchIdeasAction(),
+      ]);
+      if (mounted) {
+        if (scriptRes.success) setScripts(scriptRes.data);
+        if (charRes.success) setCharacters(charRes.data);
+        if (ideaRes.success) setIdeas(ideaRes.data);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -80,22 +109,45 @@ function ScriptsContent() {
   };
 
   // CRUD Handlers
-  const handleCreateScript = (newScript: Script) => {
-    setScripts((prev) => [newScript, ...prev]);
-    setActiveScriptId(newScript.id);
+  const handleCreateScript = async (newScript: Script) => {
+    const res = await createScriptAction({
+      ideaId: newScript.ideaId,
+      title: newScript.title,
+      description: newScript.description,
+      status: newScript.status,
+      hook: newScript.hook,
+      tags: newScript.tags,
+      characters: newScript.characters,
+    });
+    if (res.success) {
+      setScripts((prev) => [res.data, ...prev]);
+      setActiveScriptId(res.data.id);
+    } else {
+      setScripts((prev) => [newScript, ...prev]);
+      setActiveScriptId(newScript.id);
+    }
   };
 
-  const handleSaveScript = (updatedScript: Script) => {
+  const handleSaveScript = async (updatedScript: Script) => {
     setScripts((prev) =>
       prev.map((s) => (s.id === updatedScript.id ? updatedScript : s))
     );
+    await updateScriptAction(updatedScript.id, {
+      title: updatedScript.title,
+      description: updatedScript.description,
+      status: updatedScript.status,
+      hook: updatedScript.hook,
+      tags: updatedScript.tags,
+      estimatedDuration: updatedScript.estimatedDuration,
+    });
   };
 
-  const handleDeleteScript = (script: Script) => {
+  const handleDeleteScript = async (script: Script) => {
     setScripts((prev) => prev.filter((s) => s.id !== script.id));
     if (activeScriptId === script.id) {
       setActiveScriptId(null);
     }
+    await deleteScriptAction(script.id);
   };
 
   const handleCloseEditor = () => {

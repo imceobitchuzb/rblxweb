@@ -21,6 +21,7 @@ import {
   CalendarEvent,
   Character,
   IdeaItem,
+  Script,
   Video,
   VideoPlatform,
 } from "@/lib/types";
@@ -68,16 +69,46 @@ import { CreatorInsights } from "@/components/analytics/CreatorInsights";
 import { PublishingActivity } from "@/components/analytics/PublishingActivity";
 import { VideoDetailsModal } from "@/components/videos/VideoDetailsModal";
 import { cn } from "@/lib/utils";
+import { fetchVideosAction } from "@/app/actions/videos";
+import { fetchCharactersAction } from "@/app/actions/characters";
+import { fetchIdeasAction } from "@/app/actions/ideas";
+import { fetchCalendarEventsAction } from "@/app/actions/calendar";
+import { fetchScriptsAction } from "@/app/actions/scripts";
 
 function AnalyticsContent() {
   const searchParams = useSearchParams();
 
   // Primary Data Sources
-  const [videos] = React.useState<Video[]>(INITIAL_VIDEOS);
-  const [characters] = React.useState<Character[]>(INITIAL_CHARACTERS);
-  const [ideas] = React.useState<IdeaItem[]>(INITIAL_IDEAS);
-  const [scripts] = React.useState(INITIAL_SCRIPTS);
-  const [events] = React.useState<CalendarEvent[]>(INITIAL_CALENDAR_EVENTS);
+  const [videos, setVideos] = React.useState<Video[]>(INITIAL_VIDEOS);
+  const [characters, setCharacters] = React.useState<Character[]>(INITIAL_CHARACTERS);
+  const [ideas, setIdeas] = React.useState<IdeaItem[]>(INITIAL_IDEAS);
+  const [scripts, setScripts] = React.useState<Script[]>(INITIAL_SCRIPTS);
+  const [events, setEvents] = React.useState<CalendarEvent[]>(INITIAL_CALENDAR_EVENTS);
+
+  // Load from persistent storage on mount
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const [vidRes, charRes, ideaRes, scriptRes, calRes] = await Promise.all([
+        fetchVideosAction(),
+        fetchCharactersAction(),
+        fetchIdeasAction(),
+        fetchScriptsAction(),
+        fetchCalendarEventsAction(),
+      ]);
+      if (mounted) {
+        if (vidRes.success) setVideos(vidRes.data);
+        if (charRes.success) setCharacters(charRes.data);
+        if (ideaRes.success) setIdeas(ideaRes.data);
+        if (scriptRes.success) setScripts(scriptRes.data);
+        if (calRes.success) setEvents(calRes.data);
+      }
+    }
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Filters State
   const [timeRange, setTimeRange] = React.useState<AnalyticsTimeRange>("ALL");

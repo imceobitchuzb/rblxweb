@@ -21,6 +21,11 @@ import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { CommandPalette } from "@/components/command/CommandPalette";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 
+import { fetchVideosAction } from "@/app/actions/videos";
+import { fetchScriptsAction } from "@/app/actions/scripts";
+import { fetchIdeasAction } from "@/app/actions/ideas";
+import { fetchCalendarEventsAction } from "@/app/actions/calendar";
+
 interface TopNavProps {
   onOpenMobileMenu: () => void;
 }
@@ -41,6 +46,37 @@ export function TopNav({ onOpenMobileMenu }: TopNavProps) {
       INITIAL_CALENDAR_EVENTS
     )
   );
+
+  // Refresh notifications dynamically from server data on route transition
+  React.useEffect(() => {
+    let mounted = true;
+    async function refreshNotifications() {
+      try {
+        const [vRes, sRes, iRes, cRes] = await Promise.all([
+          fetchVideosAction(),
+          fetchScriptsAction(),
+          fetchIdeasAction(),
+          fetchCalendarEventsAction(),
+        ]);
+        if (mounted && vRes.success && sRes.success && iRes.success && cRes.success) {
+          setNotifications(
+            deriveWorkspaceNotifications(
+              vRes.data,
+              sRes.data,
+              iRes.data,
+              cRes.data
+            )
+          );
+        }
+      } catch {
+        // retain fallback
+      }
+    }
+    refreshNotifications();
+    return () => {
+      mounted = false;
+    };
+  }, [pathname]);
 
   // Global keyboard shortcut: Ctrl+K / Cmd+K
   React.useEffect(() => {

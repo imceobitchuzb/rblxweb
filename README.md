@@ -6,7 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
 ![Prisma](https://img.shields.io/badge/Prisma-5.20-2D3748?style=for-the-badge&logo=prisma)
-![Tests](https://img.shields.io/badge/Tests-66%20Passing-22C55E?style=for-the-badge&logo=node.js)
+![Tests](https://img.shields.io/badge/Tests-77%20Passing-22C55E?style=for-the-badge&logo=node.js)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
 
 **The Modern Content-Management & Analytics Operating System for Roblox Creators**
@@ -137,20 +137,87 @@ rblxweb/
 │   ├── analytics-utils.ts    # Creator intelligence math formulas
 │   ├── video-utils.ts        # Video pipeline operations
 │   ├── script-utils.ts       # Script runtime calculations
-│   └── calendar-utils.ts     # Calendar grid generation
+│   ├── calendar-utils.ts     # Calendar grid generation
+│   ├── prisma.ts             # Prisma client singleton & connection tester
+│   └── server/               # Server-side data access & validation
+│       ├── ideas.ts          # Ideas persistence
+│       ├── characters.ts     # Character persistence & dependency guards
+│       ├── scripts.ts        # Screenplays & scene hierarchy
+│       ├── videos.ts         # Video asset persistence
+│       ├── calendar.ts       # Calendar drop scheduling
+│       ├── analytics.ts      # Database-driven analytics feeder
+│       ├── validation.ts     # Server input validation rules
+│       ├── store.ts          # Offline development fallback store
+│       └── user-context.ts   # User ID abstraction (prepares for Auth)
+├── app/actions/              # Next.js Server Actions ("use server")
+│   ├── ideas.ts              # Idea CRUD actions
+│   ├── characters.ts         # Character CRUD actions
+│   ├── scripts.ts            # Screenplay & scene CRUD actions
+│   ├── videos.ts             # Video CRUD actions
+│   ├── calendar.ts           # Calendar scheduling actions
+│   └── settings.ts           # Studio configuration actions
 ├── prisma/
-│   └── schema.prisma         # Prepared PostgreSQL relational schema
-├── tests/                    # 66 comprehensive unit tests
-│   ├── architecture.test.ts  # Route and design tokens tests
-│   ├── ideas.test.ts         # Ideas Studio tests (13 tests)
+│   ├── schema.prisma         # Production PostgreSQL relational schema
+│   └── seed.ts               # Production demo database seeder
+├── tests/                    # 77 comprehensive automated tests
+│   ├── architecture.test.ts  # Route and design tokens tests (4 tests)
+│   ├── ideas.test.ts         # Ideas Studio tests (12 tests)
 │   ├── characters.test.ts    # Character Roster tests (6 tests)
 │   ├── scripts.test.ts       # Script Studio tests (7 tests)
 │   ├── videos.test.ts        # Video Studio tests (7 tests)
 │   ├── calendar.test.ts      # Calendar tests (6 tests)
-│   ├── analytics.test.ts     # Analytics engine tests (15 tests)
-│   └── shell-navigation.test.ts # Search & notification tests (8 tests)
+│   ├── analytics.test.ts     # Analytics engine tests (16 tests)
+│   ├── shell-navigation.test.ts # Search & notification tests (8 tests)
+│   └── database.test.ts      # Persistence, validation & cascade tests (11 tests)
 ├── CHANGELOG.md              # Detailed release history
 └── package.json
+```
+
+---
+
+## 🗄️ Persistence Architecture
+
+ROXIE HUB uses a modern, multi-tier full-stack persistence architecture:
+
+```
+[ Browser / Client ]
+        │
+        ▼ (Next.js Server Actions)
+[ app/actions/*.ts ]
+        │
+        ▼ (Input Validation & Scoped Queries)
+[ lib/server/*.ts ]
+        │
+        ▼ (PrismaClient Singleton)
+[ Prisma ORM ]
+        │
+        ▼
+[ PostgreSQL Database ]
+```
+
+### Relational Features:
+- **Cascading Deletions**: Deleting a `Script` cascades to `Scene`, which cascades to `DialogueLine` records.
+- **Dependency Protection**: Deleting a `Character` is guarded by `onDelete: Restrict`; if the character is referenced by existing screenplays, deletion is blocked with an actionable error.
+- **Indexed Fields**: High-throughput fields (`userId`, `status`, `category`, `platform`, `publishedAt`, `scheduledAt`) are indexed for sub-millisecond lookups.
+- **Offline Development Resilience**: When PostgreSQL is offline or during static site generation (`next build`), `lib/server/store.ts` provides a deterministic development fallback store, ensuring zero development downtime.
+
+### Database CLI Commands:
+
+```bash
+# Validate Prisma schema syntax
+npx prisma validate
+
+# Generate Prisma Client types
+npx prisma generate
+
+# Create and apply migrations (requires PostgreSQL)
+npx prisma migrate dev --name init_roxie_hub_persistence
+
+# Seed database with complete creator demo records
+npx prisma db seed
+
+# Open interactive visual database browser
+npx prisma studio
 ```
 
 ---
@@ -160,16 +227,16 @@ rblxweb/
 Every major domain feature is backed by isolated unit tests using pure functions:
 
 ```bash
-# Run the complete test suite (66 tests)
+# Run the complete test suite (77 tests)
 npm test
 
-# Run TypeScript strict type-check
+# Run TypeScript strict type-check (0 errors)
 npm run typecheck
 
-# Run ESLint across app, components, lib, and tests
+# Run ESLint across app, components, lib, and tests (0 errors)
 npm run lint
 
-# Build production bundle
+# Build production bundle (12/12 static pages)
 npm run build
 ```
 
@@ -183,7 +250,7 @@ npm run build
 - [x] **Phase 4**: Video Studio & Content Calendar Pipeline
 - [x] **Phase 5**: Multi-Channel Analytics & Creator Intelligence
 - [x] **Phase 5.5**: UX Shell, Global Search, Command Palette (Ctrl+K), Notification Center, Landing Page, Documentation
-- [ ] **Phase 6**: PostgreSQL Persistence with Prisma Client & Server Actions
+- [x] **Phase 6**: PostgreSQL Persistence with Prisma Client & Server Actions
 - [ ] **Phase 7**: Authentication & Multi-Creator Studio Workspaces
 - [ ] **Phase 8**: Live YouTube Data API v3 & TikTok Creator API Integrations
 - [ ] **Phase 9**: AI Assistant for Roblox Scriptwriting & Thumbnail Concepting
@@ -193,3 +260,4 @@ npm run build
 ## 📄 License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
