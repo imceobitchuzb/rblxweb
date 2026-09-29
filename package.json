@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint app components lib tests --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/architecture.test.ts tests/ideas.test.ts"
+    "test": "tsx --test tests/architecture.test.ts tests/ideas.test.ts tests/characters.test.ts tests/scripts.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
