@@ -1,76 +1,285 @@
-import { Users, Plus, Shield, UserCheck, Sparkles } from "lucide-react";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+"use client";
 
-const CHARACTER_ROLES = [
-  { role: "MAIN", desc: "Primary protagonist or channel persona" },
-  { role: "SUPPORTING", desc: "Co-stars, sidekicks, regular cast" },
-  { role: "VILLAIN", desc: "Antagonists in MM2 or story roleplay" },
-  { role: "NPC", desc: "Background characters and quest givers" },
-  { role: "SPECIAL GUEST", desc: "Collaborators and community members" },
-];
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import {
+  Users,
+  Plus,
+  Search,
+  Filter,
+  X,
+  Sparkles,
+} from "lucide-react";
+import { Character, CharacterRole, Script } from "@/lib/types";
+import { ALL_ROLES, ROLE_CONFIG, ROLE_LABELS } from "@/lib/constants";
+import { INITIAL_CHARACTERS } from "@/lib/mock-characters";
+import { INITIAL_SCRIPTS } from "@/lib/mock-scripts";
+import { filterCharacters } from "@/lib/roster-script-utils";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { CharacterCard } from "@/components/characters/CharacterCard";
+import { CharacterModal } from "@/components/characters/CharacterModal";
+import { CharacterDetailsModal } from "@/components/characters/CharacterDetailsModal";
+import { DeleteCharacterDialog } from "@/components/characters/DeleteCharacterDialog";
+import { cn } from "@/lib/utils";
 
 export default function CharactersPage() {
+  const router = useRouter();
+
+  // Characters state
+  const [characters, setCharacters] = React.useState<Character[]>(INITIAL_CHARACTERS);
+  // Shared scripts state for cross-module linking
+  const [scripts] = React.useState<Script[]>(INITIAL_SCRIPTS);
+
+  // Search and filter state
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedRole, setSelectedRole] = React.useState<string>("ALL");
+
+  // Modals state
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [editingCharacter, setEditingCharacter] = React.useState<Character | null>(null);
+  const [inspectingCharacter, setInspectingCharacter] = React.useState<Character | null>(null);
+  const [deletingCharacter, setDeletingCharacter] = React.useState<Character | null>(null);
+
+  // Filtered characters
+  const filteredCharacters = React.useMemo(() => {
+    return filterCharacters(characters, {
+      search: searchTerm,
+      role: selectedRole,
+    });
+  }, [characters, searchTerm, selectedRole]);
+
+  const hasActiveFilters = Boolean(searchTerm.trim()) || selectedRole !== "ALL";
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setSelectedRole("ALL");
+  };
+
+  // CRUD Handlers
+  const handleSaveCharacter = (
+    charData: Omit<Character, "id" | "createdAt" | "updatedAt"> & { id?: string }
+  ) => {
+    const timestamp = new Date().toISOString();
+
+    if (charData.id) {
+      // Edit
+      setCharacters((prev) =>
+        prev.map((item) =>
+          item.id === charData.id
+            ? {
+                ...item,
+                ...charData,
+                id: item.id,
+                updatedAt: timestamp,
+              }
+            : item
+        )
+      );
+
+      if (inspectingCharacter?.id === charData.id) {
+        setInspectingCharacter((prev) =>
+          prev ? { ...prev, ...charData, updatedAt: timestamp } : null
+        );
+      }
+    } else {
+      // Create
+      const newChar: Character = {
+        ...charData,
+        id: `char-${Date.now()}`,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+      setCharacters((prev) => [newChar, ...prev]);
+    }
+    setEditingCharacter(null);
+  };
+
+  const handleDeleteCharacter = (character: Character) => {
+    setCharacters((prev) => prev.filter((item) => item.id !== character.id));
+    if (inspectingCharacter?.id === character.id) {
+      setInspectingCharacter(null);
+    }
+  };
+
+  const handleNavigateToScript = (scriptId: string) => {
+    router.push(`/scripts?id=${scriptId}`);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.06]">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Character Roster
-            </h2>
-            <Badge variant="purple" size="sm">
-              Module Scaffold
-            </Badge>
+            </h1>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/30 font-semibold">
+              Roblox Universe
+            </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Maintain your universe of Roblox avatars, character personalities, and recurring cast members.
+            Maintain avatars, archetypes, personalities, and recurring cast members across your scripts.
           </p>
         </div>
 
-        <Button variant="primary" size="sm" disabled>
-          <Plus className="w-3.5 h-3.5" />
+        <Button
+          variant="primary"
+          onClick={() => {
+            setEditingCharacter(null);
+            setIsCreateModalOpen(true);
+          }}
+        >
+          <Plus className="w-4 h-4" />
           <span>New Character</span>
         </Button>
       </div>
 
-      {/* Blueprint Info */}
-      <Card variant="glass">
-        <CardHeader>
-          <CardTitle>Character Roles & Archetypes</CardTitle>
-          <Badge variant="neon" size="sm">
-            Phase 1
-          </Badge>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {CHARACTER_ROLES.map((r) => (
-              <div
-                key={r.role}
-                className="p-3.5 rounded-xl bg-surface-canvas/60 border border-white/5 space-y-1"
+      {/* Search and Filters Bar */}
+      <div className="glass-panel p-4 rounded-2xl border border-white/[0.06] space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="flex-1 max-w-md relative">
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name, personality, outfit, or tags..."
+              icon={<Search className="w-4 h-4" />}
+              className="bg-surface-canvas/90 h-10 text-xs"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-white"
+                aria-label="Clear search"
               >
-                <div className="flex items-center justify-between">
-                  <Badge variant="purple" size="sm">
-                    {r.role}
-                  </Badge>
-                  <UserCheck className="w-3.5 h-3.5 text-slate-400" />
-                </div>
-                <p className="text-[11px] text-slate-400">{r.desc}</p>
-              </div>
-            ))}
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Empty State */}
-      <EmptyState
-        icon={Users}
-        title="Character Library Initialized"
-        badge="Phase 1 Active"
-        description="The character roster schema supports avatar rendering, role classification, personality tags, and script cross-referencing."
+          {/* Role Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <button
+              onClick={() => setSelectedRole("ALL")}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap",
+                selectedRole === "ALL"
+                  ? "bg-violet-600 text-white shadow-sm"
+                  : "bg-surface-canvas/70 text-slate-400 hover:text-white border border-white/5"
+              )}
+            >
+              All Roles ({characters.length})
+            </button>
+
+            {ALL_ROLES.map((r) => {
+              const count = characters.filter((c) => c.role === r).length;
+              const isSelected = selectedRole === r;
+              return (
+                <button
+                  key={r}
+                  onClick={() => setSelectedRole(r)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap",
+                    isSelected
+                      ? "bg-violet-600 text-white shadow-sm"
+                      : "bg-surface-canvas/70 text-slate-400 hover:text-white border border-white/5"
+                  )}
+                >
+                  {ROLE_LABELS[r]} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Counter & Reset */}
+        <div className="flex items-center justify-between pt-2 border-t border-white/[0.04] text-xs">
+          <div className="text-slate-400">
+            Showing <strong className="text-white">{filteredCharacters.length}</strong> of{" "}
+            <strong className="text-white">{characters.length}</strong> characters
+          </div>
+
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilters}
+              className="text-xs text-violet-400 hover:text-violet-300 h-7 px-2"
+            >
+              Reset Filters
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Grid Content Area */}
+      {characters.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No characters in roster"
+          badge="Empty Cast"
+          description="Create your first Roblox avatar character profile to start assigning lines in Script Studio."
+          actionLabel="Create First Character"
+          onAction={() => {
+            setEditingCharacter(null);
+            setIsCreateModalOpen(true);
+          }}
+        />
+      ) : filteredCharacters.length === 0 ? (
+        <EmptyState
+          icon={Filter}
+          title="No characters match your search"
+          badge="Filter Result"
+          description="Try broadening your search term or selecting a different character role filter."
+          actionLabel="Reset Filters"
+          onAction={handleResetFilters}
+        />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredCharacters.map((character) => (
+            <CharacterCard
+              key={character.id}
+              character={character}
+              onSelect={(selected) => setInspectingCharacter(selected)}
+              onEdit={(target) => setEditingCharacter(target)}
+              onDelete={(target) => setDeletingCharacter(target)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Create / Edit Modal */}
+      <CharacterModal
+        isOpen={isCreateModalOpen || Boolean(editingCharacter)}
+        initialData={editingCharacter}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditingCharacter(null);
+        }}
+        onSubmit={handleSaveCharacter}
+      />
+
+      {/* Details Dossier Modal */}
+      <CharacterDetailsModal
+        isOpen={Boolean(inspectingCharacter)}
+        character={inspectingCharacter}
+        scripts={scripts}
+        onClose={() => setInspectingCharacter(null)}
+        onEdit={(target) => setEditingCharacter(target)}
+        onDelete={(target) => setDeletingCharacter(target)}
+        onNavigateToScript={handleNavigateToScript}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteCharacterDialog
+        isOpen={Boolean(deletingCharacter)}
+        character={deletingCharacter}
+        scripts={scripts}
+        onClose={() => setDeletingCharacter(null)}
+        onConfirm={handleDeleteCharacter}
       />
     </div>
   );

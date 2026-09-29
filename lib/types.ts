@@ -60,37 +60,80 @@ export interface VideoItem {
   tags: string[];
 }
 
-export interface SceneItem {
+export type DialogueEmotion =
+  | "NEUTRAL"
+  | "HAPPY"
+  | "ANGRY"
+  | "SCARED"
+  | "CONFUSED"
+  | "SUSPICIOUS"
+  | "EXCITED"
+  | "SURPRISED";
+
+export type ScriptStatus =
+  | "DRAFT"
+  | "SCRIPTING"
+  | "READY"
+  | "IN_PRODUCTION"
+  | "COMPLETED"
+  | "ARCHIVED";
+
+export interface DialogueLine {
   id: string;
-  title: string;
+  characterId: string;
+  text: string;
+  emotion: DialogueEmotion;
   duration: number; // in seconds
-  description: string;
-  dialogue: string;
-  characters: string[];
 }
 
-export interface ScriptItem {
+export interface Scene {
   id: string;
   title: string;
-  hook: string;
-  estimatedDuration: number; // in seconds
+  description: string;
+  duration: number; // in seconds
+  dialogue: DialogueLine[];
+  characters: string[]; // character IDs
   notes: string;
-  scenes: SceneItem[];
-  characters: string[];
+}
+
+// Backward compatibility alias
+export type SceneItem = Scene;
+
+export interface Script {
+  id: string;
+  ideaId?: string;
+  title: string;
+  description: string;
+  status: ScriptStatus;
+  hook: string;
+  scenes: Scene[];
+  characters: string[]; // character IDs
+  tags: string[];
+  estimatedDuration: number; // in seconds
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CharacterItem {
+// Backward compatibility alias
+export type ScriptItem = Script;
+
+export interface Character {
   id: string;
   name: string;
-  avatarUrl: string;
   role: CharacterRole;
   description: string;
   personality: string;
-  notes: string;
   tags: string[];
+  avatar: string;
+  avatarUrl?: string; // alias
+  outfit: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
 }
+
+// Backward compatibility alias
+export type CharacterItem = Character;
 
 export interface CalendarEventItem {
   id: string;

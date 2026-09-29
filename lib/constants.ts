@@ -9,7 +9,136 @@ import {
   Settings,
   Sparkles,
 } from "lucide-react";
-import type { IdeaCategory, IdeaPriority, IdeaStatus, VideoPlatform } from "./types";
+import type {
+  CharacterRole,
+  DialogueEmotion,
+  IdeaCategory,
+  IdeaPriority,
+  IdeaStatus,
+  ScriptStatus,
+  VideoPlatform,
+} from "./types";
+
+export const ALL_ROLES: CharacterRole[] = [
+  "MAIN",
+  "SUPPORTING",
+  "VILLAIN",
+  "NPC",
+  "SPECIAL_GUEST",
+];
+
+export const ROLE_LABELS: Record<CharacterRole, string> = {
+  MAIN: "Main",
+  SUPPORTING: "Supporting",
+  VILLAIN: "Villain",
+  NPC: "NPC",
+  SPECIAL_GUEST: "Special Guest",
+};
+
+export const ROLE_CONFIG: Record<
+  CharacterRole,
+  { label: string; bg: string; text: string; border: string; badgeVariant: "purple" | "neon" | "crimson" | "default" | "amber" }
+> = {
+  MAIN: {
+    label: "Main",
+    bg: "bg-violet-500/10",
+    text: "text-violet-300",
+    border: "border-violet-500/30",
+    badgeVariant: "purple",
+  },
+  SUPPORTING: {
+    label: "Supporting",
+    bg: "bg-cyan-500/10",
+    text: "text-cyan-300",
+    border: "border-cyan-500/30",
+    badgeVariant: "neon",
+  },
+  VILLAIN: {
+    label: "Villain",
+    bg: "bg-rose-500/10",
+    text: "text-rose-300",
+    border: "border-rose-500/30",
+    badgeVariant: "crimson",
+  },
+  NPC: {
+    label: "NPC",
+    bg: "bg-slate-500/10",
+    text: "text-slate-300",
+    border: "border-slate-500/30",
+    badgeVariant: "default",
+  },
+  SPECIAL_GUEST: {
+    label: "Special Guest",
+    bg: "bg-amber-500/10",
+    text: "text-amber-300",
+    border: "border-amber-500/30",
+    badgeVariant: "amber",
+  },
+};
+
+export const ALL_SCRIPT_STATUSES: ScriptStatus[] = [
+  "DRAFT",
+  "SCRIPTING",
+  "READY",
+  "IN_PRODUCTION",
+  "COMPLETED",
+  "ARCHIVED",
+];
+
+export const SCRIPT_STATUS_LABELS: Record<ScriptStatus, string> = {
+  DRAFT: "Draft",
+  SCRIPTING: "Scripting",
+  READY: "Ready",
+  IN_PRODUCTION: "In Production",
+  COMPLETED: "Completed",
+  ARCHIVED: "Archived",
+};
+
+export const SCRIPT_STATUS_PROGRESSION: ScriptStatus[] = [
+  "DRAFT",
+  "SCRIPTING",
+  "READY",
+  "IN_PRODUCTION",
+  "COMPLETED",
+  "ARCHIVED",
+];
+
+export const SCRIPT_STATUS_CONFIG: Record<
+  ScriptStatus,
+  { label: string; bg: string; text: string; dot: string }
+> = {
+  DRAFT: { bg: "bg-slate-800/60", text: "text-slate-300", dot: "bg-slate-400" },
+  SCRIPTING: { bg: "bg-purple-900/40", text: "text-purple-300", dot: "bg-purple-400" },
+  READY: { bg: "bg-blue-900/40", text: "text-blue-300", dot: "bg-blue-400" },
+  IN_PRODUCTION: { bg: "bg-amber-900/40", text: "text-amber-300", dot: "bg-amber-400" },
+  COMPLETED: { bg: "bg-emerald-900/40", text: "text-emerald-300", dot: "bg-emerald-400" },
+  ARCHIVED: { bg: "bg-zinc-800/40", text: "text-zinc-400", dot: "bg-zinc-500" },
+};
+
+export const ALL_EMOTIONS: DialogueEmotion[] = [
+  "NEUTRAL",
+  "HAPPY",
+  "ANGRY",
+  "SCARED",
+  "CONFUSED",
+  "SUSPICIOUS",
+  "EXCITED",
+  "SURPRISED",
+];
+
+export const EMOTION_CONFIG: Record<
+  DialogueEmotion,
+  { label: string; icon: string; color: string }
+> = {
+  NEUTRAL: { label: "Neutral", icon: "😐", color: "text-slate-400" },
+  HAPPY: { label: "Happy", icon: "😄", color: "text-emerald-400" },
+  ANGRY: { label: "Angry", icon: "😡", color: "text-rose-400" },
+  SCARED: { label: "Scared", icon: "😱", color: "text-indigo-400" },
+  CONFUSED: { label: "Confused", icon: "🤔", color: "text-amber-400" },
+  SUSPICIOUS: { label: "Suspicious", icon: "🧐", color: "text-yellow-400" },
+  EXCITED: { label: "Excited", icon: "🤩", color: "text-cyan-400" },
+  SURPRISED: { label: "Surprised", icon: "😲", color: "text-pink-400" },
+};
 
 export const CATEGORY_COLORS: Record<IdeaCategory, { bg: string; text: string; border: string }> = {
   MM2: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/30" },
