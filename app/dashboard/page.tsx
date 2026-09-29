@@ -22,6 +22,7 @@ import {
   Play,
   CheckCircle2,
   TrendingUp,
+  Percent,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -31,6 +32,12 @@ import { INITIAL_VIDEOS } from "@/lib/mock-videos";
 import { INITIAL_CALENDAR_EVENTS } from "@/lib/mock-calendar";
 import { INITIAL_SCRIPTS } from "@/lib/mock-scripts";
 import { INITIAL_IDEAS } from "@/lib/mock-ideas";
+import {
+  calculateAverageEngagement,
+  calculateAverageViews,
+  formatCompactNumber,
+  formatPercent,
+} from "@/lib/analytics-utils";
 import {
   formatDate,
   formatDuration,
@@ -53,11 +60,14 @@ export default function DashboardPage() {
     ["PLANNING", "IN_PRODUCTION", "EDITING"].includes(v.status)
   ).length;
   const scheduledCount = videos.filter((v) => v.status === "SCHEDULED").length;
-  const publishedCount = videos.filter((v) => v.status === "PUBLISHED").length;
+  const publishedVideosList = videos.filter((v) => v.status === "PUBLISHED");
+  const publishedCount = publishedVideosList.length;
 
   // Aggregate metrics
   const totalViews = videos.reduce((acc, v) => acc + (v.views || 0), 0);
   const totalLikes = videos.reduce((acc, v) => acc + (v.likes || 0), 0);
+  const averageViews = calculateAverageViews(publishedVideosList);
+  const averageEngagement = calculateAverageEngagement(publishedVideosList);
 
   // Upcoming content
   const upcomingContent = getUpcomingEvents(events, 4);
@@ -198,6 +208,68 @@ export default function DashboardPage() {
               </span>
             </div>
           </Link>
+        </div>
+      </div>
+
+      {/* Compact Channel Analytics Summary */}
+      <div className="p-5 rounded-2xl glass-panel bg-surface-panel/90 border border-white/[0.08] space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-cyan-400" />
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+              Channel Analytics Summary
+            </h3>
+          </div>
+          <Link href="/analytics">
+            <Button variant="primary" size="sm" className="h-7 text-xs px-3">
+              <span>Open Analytics</span>
+              <ArrowRight className="w-3 h-3 ml-1" />
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-3.5 rounded-xl bg-surface-canvas/60 border border-white/5 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+              <Eye className="w-3 h-3 text-cyan-400" />
+              Total Views
+            </span>
+            <p className="text-xl font-black text-white font-mono">
+              {formatCompactNumber(totalViews)}
+            </p>
+            <span className="text-[10px] text-slate-500">All-time catalog</span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-surface-canvas/60 border border-white/5 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+              <TrendingUp className="w-3 h-3 text-violet-400" />
+              Average Views
+            </span>
+            <p className="text-xl font-black text-white font-mono">
+              {formatCompactNumber(averageViews)}
+            </p>
+            <span className="text-[10px] text-slate-500">Per published video</span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-surface-canvas/60 border border-white/5 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+              <Percent className="w-3 h-3 text-emerald-400" />
+              Engagement Rate
+            </span>
+            <p className="text-xl font-black text-emerald-400 font-mono">
+              {formatPercent(averageEngagement)}
+            </p>
+            <span className="text-[10px] text-slate-500">Likes + comments ratio</span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-surface-canvas/60 border border-white/5 space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1">
+              <VideoIcon className="w-3 h-3 text-amber-400" />
+              Published Videos
+            </span>
+            <p className="text-xl font-black text-white font-mono">{publishedCount}</p>
+            <span className="text-[10px] text-slate-500">Across 4 platforms</span>
+          </div>
         </div>
       </div>
 

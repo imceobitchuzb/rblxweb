@@ -393,3 +393,13 @@ export const DEFAULT_CREATOR = {
   streakDays: 14,
   primaryPlatform: "YOUTUBE" as VideoPlatform,
 };
+
+export const ALL_ANALYTICS_TIME_RANGES = ["7D", "30D", "90D", "ALL"] as const;
+
+export const TIME_RANGE_LABELS: Record<"7D" | "30D" | "90D" | "ALL", string> = {
+  "7D": "7 Days",
+  "30D": "30 Days",
+  "90D": "90 Days",
+  ALL: "All Time",
+};
+

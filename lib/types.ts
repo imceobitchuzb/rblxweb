@@ -204,3 +204,70 @@ export interface CreatorProfile {
   streakDays: number;
   primaryPlatform: VideoPlatform;
 }
+
+export type AnalyticsTimeRange = "7D" | "30D" | "90D" | "ALL";
+
+export interface PlatformMetrics {
+  platform: VideoPlatform;
+  videos: number;
+  views: number;
+  averageViews: number;
+  likes: number;
+  comments: number;
+  engagementRate: number;
+}
+
+export interface TimeSeriesDataPoint {
+  date: string; // YYYY-MM-DD
+  label: string; // "Sep 22"
+  views: number;
+  likes: number;
+  comments: number;
+  engagementRate: number;
+  videoCount: number;
+}
+
+export interface CharacterAnalytics {
+  characterId: string;
+  name: string;
+  role: string;
+  avatar: string;
+  appearances: number;
+  totalViews: number;
+  averageViews: number;
+  totalLikes: number;
+  totalComments: number;
+  averageEngagementRate: number;
+}
+
+export interface CategoryPerformance {
+  category: string;
+  videoCount: number;
+  totalViews: number;
+  averageViews: number;
+  averageEngagementRate: number;
+}
+
+export interface FormatPerformance {
+  format: "Short" | "Long Video";
+  videoCount: number;
+  totalViews: number;
+  averageViews: number;
+  averageEngagementRate: number;
+}
+
+export interface CreatorInsight {
+  id: string;
+  type: "positive" | "info" | "neutral";
+  title: string;
+  detail: string;
+  stat?: string;
+}
+
+export interface PublishingActivityData {
+  period: string; // e.g. "Aug 2026", "Sep 2026"
+  published: number;
+  scheduled: number;
+  inProduction: number;
+}
+

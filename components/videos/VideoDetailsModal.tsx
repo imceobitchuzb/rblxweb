@@ -18,6 +18,7 @@ import {
   Edit,
   TrendingUp,
   Sparkles,
+  BarChart3,
 } from "lucide-react";
 import { Character, IdeaItem, Script, Video } from "@/lib/types";
 import {
@@ -146,7 +147,22 @@ export function VideoDetailsModal({
         </div>
 
         {/* Performance Metrics Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+              Performance Metrics
+            </span>
+            <Link
+              href={`/analytics?videoId=${video.id}`}
+              className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1"
+            >
+              <span>View Channel Analytics</span>
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="p-3 rounded-xl bg-surface-canvas/80 border border-white/5 space-y-1">
             <span className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
               <Eye className="w-3.5 h-3.5 text-cyan-400" />
@@ -187,6 +203,7 @@ export function VideoDetailsModal({
             </p>
           </div>
         </div>
+      </div>
 
         {/* Video Description */}
         <div className="space-y-1.5">
@@ -393,6 +410,17 @@ export function VideoDetailsModal({
           </Button>
 
           <div className="flex items-center gap-2">
+            <Link href={`/analytics?videoId=${video.id}`} onClick={onClose}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-cyan-400 hover:text-cyan-300 border-cyan-500/20 hover:bg-cyan-500/10"
+              >
+                <BarChart3 className="w-3.5 h-3.5 mr-1" />
+                View Analytics
+              </Button>
+            </Link>
+
             {video.status !== "PUBLISHED" && (
               <Button
                 variant="outline"
